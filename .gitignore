@@ -1,2 +1,3 @@
 ministrace
-syscalls.h
+syscallents.h
+ministrace.o

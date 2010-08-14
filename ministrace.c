@@ -9,6 +9,7 @@
 #include <assert.h>
 
 #include "syscalls.h"
+#include "syscallents.h"
 
 #define offsetof(a, b) __builtin_offsetof(a,b)
 
@@ -26,9 +27,13 @@ int wait_for_syscall(pid_t child) {
 }
 
 const char *syscall_name(int scn) {
+    struct syscall_entry *ent;
     static char buf[128];
-    if (scn <= MAX_SYSCALL_NUM && syscall_names[scn])
-        return syscall_names[scn];
+    if (scn <= MAX_SYSCALL_NUM) {
+        ent = &syscalls[scn];
+        if (ent->name)
+            return ent->name;
+    }
     snprintf(buf, sizeof buf, "sys_%d", scn);
     return buf;
 }

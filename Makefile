@@ -4,7 +4,7 @@ LINUX_SRC=~/code/linux-2.6
 
 all: ministrace
 
-ministrace: ministrace.c syscalls.h
+ministrace.o: syscalls.h syscallents.h
 
-syscalls.h: $(GEN_TABLES)
+syscallents.h: $(GEN_TABLES)
 	$(GEN_TABLES) $(LINUX_SRC)
