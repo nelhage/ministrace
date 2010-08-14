@@ -8,19 +8,9 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "syscalls.h"
+
 #define offsetof(a, b) __builtin_offsetof(a,b)
-
-int do_child(int argc, char **argv) {
-    char *args [argc+1];
-    int i;
-    for (i=0;i<argc;i++)
-        args[i] = argv[i];
-    args[argc] = NULL;
-
-    ptrace(PTRACE_TRACEME);
-    kill(getpid(), SIGSTOP);
-    return execvp(args[0], args);
-}
 
 int wait_for_syscall(pid_t child) {
     int status;
@@ -33,6 +23,14 @@ int wait_for_syscall(pid_t child) {
             return 1;
         fprintf(stderr, "[stopped %d (%x)]\n", status, WSTOPSIG(status));
     }
+}
+
+const char *syscall_name(int scn) {
+    static char buf[128];
+    if (scn <= MAX_SYSCALL_NUM && syscall_names[scn])
+        return syscall_names[scn];
+    snprintf(buf, sizeof buf, "sys_%d", scn);
+    return buf;
 }
 
 int do_trace(pid_t child) {
@@ -48,7 +46,7 @@ int do_trace(pid_t child) {
         syscall = ptrace(PTRACE_PEEKUSER, child, offsetof(struct user, regs.orig_eax));
         assert(errno == 0);
 
-        fprintf(stderr, "syscall(%d) = ", syscall);
+        fprintf(stderr, "%s(...) = ", syscall_name(syscall));
 
         if (wait_for_syscall(child) != 0)
             break;
@@ -61,6 +59,17 @@ int do_trace(pid_t child) {
     return 0;
 }
 
+int do_child(int argc, char **argv) {
+    char *args [argc+1];
+    int i;
+    for (i=0;i<argc;i++)
+        args[i] = argv[i];
+    args[argc] = NULL;
+
+    ptrace(PTRACE_TRACEME);
+    kill(getpid(), SIGSTOP);
+    return execvp(args[0], args);
+}
 
 int main(int argc, char **argv) {
     pid_t child;
