@@ -63,7 +63,11 @@ def find_args(linux):
     return syscalls
 
 def parse_type(t):
-    return "ARG_PTR"
+    if re.search(r'^(const\s*)?char\s*(__user\s*)?\*\s*$', t):
+        return "ARG_STR"
+    if t.endswith('*'):
+        return "ARG_PTR"
+    return "ARG_INT"
 
 def write_output(syscalls_h, types, numbers):
     out = open(syscalls_h, 'w')

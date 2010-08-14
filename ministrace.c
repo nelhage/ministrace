@@ -7,11 +7,19 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
+#include <string.h>
 
 #include "syscalls.h"
 #include "syscallents.h"
 
 #define offsetof(a, b) __builtin_offsetof(a,b)
+#define get_reg(child, name) __get_reg(child, offsetof(struct user, regs.name))
+
+long __get_reg(pid_t child, int off) {
+    long val = ptrace(PTRACE_PEEKUSER, child, off);
+    assert(errno == 0);
+    return val;
+}
 
 int wait_for_syscall(pid_t child) {
     int status;
@@ -38,9 +46,82 @@ const char *syscall_name(int scn) {
     return buf;
 }
 
+long get_syscall_arg(pid_t child, int which) {
+    switch (which) {
+    case 0: return get_reg(child, ebx);
+    case 1: return get_reg(child, ecx);
+    case 2: return get_reg(child, edx);
+    case 3: return get_reg(child, esi);
+    case 4: return get_reg(child, edi);
+    case 5: return get_reg(child, ebp);
+    default: return -1L;
+    }
+}
+
+char *read_string(pid_t child, unsigned long addr) {
+    char *val = malloc(4096);
+    int allocated = 4096;
+    int read = 0;
+    unsigned long tmp;
+    while (1) {
+        if (read + sizeof tmp > allocated) {
+            allocated *= 2;
+            val = realloc(val, allocated);
+        }
+        tmp = ptrace(PTRACE_PEEKDATA, child, addr + read);
+        if(errno != 0) break;
+        memcpy(val + read, &tmp, sizeof tmp);
+        if (memchr(&tmp, 0, sizeof tmp) != NULL)
+            break;
+        read += sizeof tmp;
+    }
+    return val;
+}
+
+void print_syscall_args(pid_t child, int num) {
+    struct syscall_entry *ent = NULL;
+    int nargs = SYSCALL_MAXARGS;
+    int i;
+    char *strval;
+
+    if (num <= MAX_SYSCALL_NUM && syscalls[num].name) {
+        ent = &syscalls[num];
+        nargs = ent->nargs;
+    }
+    for (i = 0; i < nargs; i++) {
+        long arg = get_syscall_arg(child, i);
+        int type = ent ? ent->args[i] : ARG_PTR;
+        switch (type) {
+        case ARG_INT:
+            fprintf(stderr, "%ld", arg);
+            break;
+        case ARG_STR:
+            strval = read_string(child, arg);
+            fprintf(stderr, "\"%s\"", strval);
+            free(strval);
+            break;
+        default:
+            fprintf(stderr, "0x%lx", arg);
+            break;
+        }
+        if (i != nargs - 1)
+            fprintf(stderr, ", ");
+    }
+}
+
+void print_syscall(pid_t child) {
+    int num;
+    num = get_reg(child, orig_eax);
+    assert(errno == 0);
+
+    fprintf(stderr, "%s(", syscall_name(num));
+    print_syscall_args(child, num);
+    fprintf(stderr, ") = ");
+}
+
 int do_trace(pid_t child) {
     int status;
-    int syscall, retval;
+    int retval;
     waitpid(child, &status, 0);
     assert(WIFSTOPPED(status));
     ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
@@ -48,15 +129,12 @@ int do_trace(pid_t child) {
         if (wait_for_syscall(child) != 0)
             break;
 
-        syscall = ptrace(PTRACE_PEEKUSER, child, offsetof(struct user, regs.orig_eax));
-        assert(errno == 0);
-
-        fprintf(stderr, "%s(...) = ", syscall_name(syscall));
+        print_syscall(child);
 
         if (wait_for_syscall(child) != 0)
             break;
 
-        retval = ptrace(PTRACE_PEEKUSER, child, offsetof(struct user, regs.eax));
+        retval = get_reg(child, eax);
         assert(errno == 0);
 
         fprintf(stderr, "%d\n", retval);

@@ -1,4 +1,4 @@
-#define MAXARGS 6
+#define SYSCALL_MAXARGS 6
 enum argtype {
     ARG_INT,
     ARG_PTR,
@@ -8,5 +8,5 @@ enum argtype {
 struct syscall_entry {
     const char *name;
     int nargs;
-    enum argtype args[MAXARGS];
+    enum argtype args[SYSCALL_MAXARGS];
 };
