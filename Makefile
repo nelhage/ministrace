@@ -1,0 +1,3 @@
+CFLAGS=-Wall
+
+all: ministrace
