@@ -1,13 +1,11 @@
 #include <sys/ptrace.h>
-#include <sys/user.h>
+#include <sys/reg.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-
-#define offsetof(a, b) __builtin_offsetof(a,b)
 
 int do_child(int argc, char **argv) {
     char *args [argc+1];
@@ -40,12 +38,12 @@ int do_trace(pid_t child) {
     while(1) {
         if (wait_for_syscall(child) != 0) break;
 
-        syscall = ptrace(PTRACE_PEEKUSER, child, offsetof(struct user, regs.orig_eax));
+        syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long)*ORIG_EAX);
         fprintf(stderr, "syscall(%d) = ", syscall);
 
         if (wait_for_syscall(child) != 0) break;
 
-        retval = ptrace(PTRACE_PEEKUSER, child, offsetof(struct user, regs.eax));
+        retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long)*EAX);
         fprintf(stderr, "%d\n", retval);
     }
     return 0;
