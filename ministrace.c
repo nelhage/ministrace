@@ -69,7 +69,10 @@ char *read_string(pid_t child, unsigned long addr) {
             val = realloc(val, allocated);
         }
         tmp = ptrace(PTRACE_PEEKDATA, child, addr + read);
-        if(errno != 0) break;
+        if(errno != 0) {
+            val[read] = 0;
+            break;
+        }
         memcpy(val + read, &tmp, sizeof tmp);
         if (memchr(&tmp, 0, sizeof tmp) != NULL)
             break;
