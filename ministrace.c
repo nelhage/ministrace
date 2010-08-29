@@ -12,6 +12,13 @@
 #include "syscalls.h"
 #include "syscallents.h"
 
+/* cheap trick for reading syscall number / return value. */
+#ifdef __amd64__
+#define eax rax
+#define orig_eax orig_rax
+#else
+#endif
+
 #define offsetof(a, b) __builtin_offsetof(a,b)
 #define get_reg(child, name) __get_reg(child, offsetof(struct user, regs.name))
 
@@ -48,12 +55,21 @@ const char *syscall_name(int scn) {
 
 long get_syscall_arg(pid_t child, int which) {
     switch (which) {
+#ifdef __amd64__
+    case 0: return get_reg(child, rdi);
+    case 1: return get_reg(child, rsi);
+    case 2: return get_reg(child, rdx);
+    case 3: return get_reg(child, rcx);
+    case 4: return get_reg(child, r8);
+    case 5: return get_reg(child, r9);
+#else
     case 0: return get_reg(child, ebx);
     case 1: return get_reg(child, ecx);
     case 2: return get_reg(child, edx);
     case 3: return get_reg(child, esi);
     case 4: return get_reg(child, edi);
     case 5: return get_reg(child, ebp);
+#endif
     default: return -1L;
     }
 }

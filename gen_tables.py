@@ -96,7 +96,12 @@ def main(args):
         print >>sys.stderr, "Usage: %s /path/to/linux-2.6" % (sys.argv[0],)
         return 1
     linux_dir = args[0]
-    syscall_numbers = do_syscall_numbers(os.path.join(linux_dir, "arch/x86/include/asm/unistd_32.h"))
+    if os.uname()[4] == 'x86_64':
+        unistd_h = "arch/x86/include/asm/unistd_64.h"
+    else:
+        unistd_h = "arch/x86/include/asm/unistd_32.h"
+
+    syscall_numbers = do_syscall_numbers(os.path.join(linux_dir, unistd_h))
     syscall_types   = find_args(linux_dir)
     write_output('syscallents.h', syscall_types, syscall_numbers)
 
