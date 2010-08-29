@@ -1,4 +1,5 @@
 CFLAGS=-Wall -m32
+LDFLAGS=-m32
 GEN_TABLES=./gen_tables.py
 LINUX_SRC=~/code/linux-2.6
 
