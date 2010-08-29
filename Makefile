@@ -1,3 +1,3 @@
-CFLAGS=-Wall
+CFLAGS=-Wall -m32
 
 all: ministrace
