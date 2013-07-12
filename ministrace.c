@@ -192,12 +192,33 @@ int main(int argc, char **argv) {
 		int syscall = MAX_SYSCALL_NUM+2;
 
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s [-s int] prog args\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-s <syscall int>|-n <syscall name>] <program> <args>\n", argv[0]);
         exit(1);
     }
 
 		if(strcmp(argv[1], "-s") == 0) {
 			syscall = atoi(argv[2]);
+			if (syscall > MAX_SYSCALL_NUM) {
+        fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
+        exit(1);
+			}
+			push = 3;
+		}
+
+		if(strcmp(argv[1], "-n") == 0) {
+			char *syscallname = argv[2];
+			struct syscall_entry *ent;
+			int i;
+
+			for(i = 0; i < sizeof(syscalls); i++) {
+        ent = &syscalls[i];
+				if(strncmp(syscallname, ent->name, strlen( ent->name)) == 0) {
+					//printf("%s %d\n", ent->name, i);
+					syscall = i;
+					break;
+				}
+			}
+
 			push = 3;
 		}
 
