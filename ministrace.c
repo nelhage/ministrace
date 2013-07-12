@@ -1,4 +1,5 @@
 #include <sys/ptrace.h>
+#include <bits/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
 #include <sys/types.h>
