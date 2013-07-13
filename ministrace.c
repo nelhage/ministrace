@@ -213,10 +213,14 @@ int main(int argc, char **argv) {
 			for(i = 0; i < sizeof(syscalls); i++) {
         ent = &syscalls[i];
 				if(strncmp(syscallname, ent->name, strlen( ent->name)) == 0) {
-					//printf("%s %d\n", ent->name, i);
 					syscall = i;
 					break;
 				}
+			}
+
+			if(syscall > MAX_SYSCALL_NUM) {
+        fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
+				exit(1);
 			}
 
 			push = 3;
@@ -225,7 +229,7 @@ int main(int argc, char **argv) {
 
     child = fork();
     if (child == 0) {
-        return do_child(argc-1, argv+push);
+        return do_child(argc-push, argv+push);
     } else {
         return do_trace(child, syscall);
     }
