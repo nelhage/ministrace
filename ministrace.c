@@ -189,7 +189,7 @@ int do_child(int argc, char **argv) {
 int main(int argc, char **argv) {
     pid_t child;
     int push = 1;
-    int syscall = MAX_SYSCALL_NUM+2;
+    int syscall = -1;
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s [-s <syscall int>|-n <syscall name>] <program> <args>\n", argv[0]);
@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
 
     if(strcmp(argv[1], "-s") == 0) {
         syscall = atoi(argv[2]);
-        if (syscall > MAX_SYSCALL_NUM) {
+        if (syscall > MAX_SYSCALL_NUM || syscall < 0) {
             fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
             exit(1);
         }
@@ -212,13 +212,13 @@ int main(int argc, char **argv) {
 
         for(i = 0; i < sizeof(syscalls)/sizeof(*syscalls); i++) {
             ent = &syscalls[i];
-            if(strncmp(syscallname, ent->name, strlen( ent->name)) == 0) {
+            if(strcmp(syscallname, ent->name) == 0) {
                 syscall = i;
                 break;
             }
         }
 
-        if(syscall > MAX_SYSCALL_NUM) {
+        if(syscall == -1) {
             fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
             exit(1);
         }
