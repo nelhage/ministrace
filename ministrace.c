@@ -138,17 +138,17 @@ void print_syscall(pid_t child, int syscall_req) {
     print_syscall_args(child, num);
     fprintf(stderr, ") = ");
 
-		if( syscall_req <= MAX_SYSCALL_NUM) {
-			pause_on( num, syscall_req);
-		}
+    if( syscall_req <= MAX_SYSCALL_NUM) {
+        pause_on( num, syscall_req);
+    }
 }
 
 int pause_on(int syscall_req, int syscall) {
-		if(syscall == syscall_req)
-				do {
-						char buf[2];
-						fgets(buf, sizeof(buf), stdin); // waits until enter to continue    
-				} while(0);
+    if(syscall == syscall_req)
+        do {
+            char buf[2];
+            fgets(buf, sizeof(buf), stdin); // waits until enter to continue
+        } while(0);
 }
 
 int do_trace(pid_t child, int syscall_req) {
@@ -188,43 +188,43 @@ int do_child(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     pid_t child;
-		int push = 1;
-		int syscall = MAX_SYSCALL_NUM+2;
+    int push = 1;
+    int syscall = MAX_SYSCALL_NUM+2;
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s [-s <syscall int>|-n <syscall name>] <program> <args>\n", argv[0]);
         exit(1);
     }
 
-		if(strcmp(argv[1], "-s") == 0) {
-			syscall = atoi(argv[2]);
-			if (syscall > MAX_SYSCALL_NUM) {
-        fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
-        exit(1);
-			}
-			push = 3;
-		}
+    if(strcmp(argv[1], "-s") == 0) {
+        syscall = atoi(argv[2]);
+        if (syscall > MAX_SYSCALL_NUM) {
+            fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
+            exit(1);
+        }
+        push = 3;
+    }
 
-		if(strcmp(argv[1], "-n") == 0) {
-			char *syscallname = argv[2];
-			struct syscall_entry *ent;
-			int i;
+    if(strcmp(argv[1], "-n") == 0) {
+        char *syscallname = argv[2];
+        struct syscall_entry *ent;
+        int i;
 
-			for(i = 0; i < sizeof(syscalls); i++) {
-        ent = &syscalls[i];
-				if(strncmp(syscallname, ent->name, strlen( ent->name)) == 0) {
-					syscall = i;
-					break;
-				}
-			}
+        for(i = 0; i < sizeof(syscalls); i++) {
+            ent = &syscalls[i];
+            if(strncmp(syscallname, ent->name, strlen( ent->name)) == 0) {
+                syscall = i;
+                break;
+            }
+        }
 
-			if(syscall > MAX_SYSCALL_NUM) {
-        fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
-				exit(1);
-			}
+        if(syscall > MAX_SYSCALL_NUM) {
+            fprintf(stderr, "Error: %s is an invalid syscall\n", argv[2]);
+            exit(1);
+        }
 
-			push = 3;
-		}
+        push = 3;
+    }
 
 
     child = fork();
