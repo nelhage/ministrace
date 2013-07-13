@@ -210,7 +210,7 @@ int main(int argc, char **argv) {
         struct syscall_entry *ent;
         int i;
 
-        for(i = 0; i < sizeof(syscalls); i++) {
+        for(i = 0; i < sizeof(syscalls)/sizeof(*syscalls); i++) {
             ent = &syscalls[i];
             if(strncmp(syscallname, ent->name, strlen( ent->name)) == 0) {
                 syscall = i;
