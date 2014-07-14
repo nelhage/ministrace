@@ -60,7 +60,7 @@ long get_syscall_arg(pid_t child, int which) {
     case 0: return get_reg(child, rdi);
     case 1: return get_reg(child, rsi);
     case 2: return get_reg(child, rdx);
-    case 3: return get_reg(child, rcx);
+    case 3: return get_reg(child, r10);
     case 4: return get_reg(child, r8);
     case 5: return get_reg(child, r9);
 #else
