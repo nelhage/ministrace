@@ -140,7 +140,7 @@ int run_parent_tracer(pid_t pid, int stop_req_syscall_nr) {
         abort();
     }
     /*
-     * ELUCIDATION
+     * ELUCIDATION:
      *  - `PTRACE_O_TRACESYSGOOD`: When delivering syscall traps, set bit 7 in the signal number (i.e., deliver SIGTRAP|0x80)
      *    -> Makes it easier (for tracer) to distinguish b/w normal- & from syscalls caused traps
      */
@@ -225,9 +225,6 @@ int wait_for_syscall(pid_t pid) {
 }
 
 
-/**
- * Note: Syscall args (up to 6) are passed (on amd64) in rdi, rsi, rdx, r10, r8, and r9
- */
 long __get_reg(pid_t pid, size_t off_user_struct) {
     long reg_val = ptrace(PTRACE_PEEKUSER, pid, off_user_struct);
     if (errno) {
@@ -287,6 +284,9 @@ void print_syscall_args(pid_t pid, int syscall_nr) {
     }
 }
 
+/**
+ * Note: Syscall args (up to 6) are passed (on amd64) in rdi, rsi, rdx, r10, r8, and r9
+ */
 long get_syscall_arg(pid_t pid, int which) {
     switch (which) {
 #ifdef __amd64__

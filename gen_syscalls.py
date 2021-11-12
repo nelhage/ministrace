@@ -143,7 +143,7 @@ def parse_syscall_arg_type(arg_str):
 
 def main(args):
     if not args or len(args) > 1:
-        print("Usage: %s /path/to/linux_src_dir" % (sys.argv[0],), file=sys.stderr)     # Note: Trailing comma it is only required for single-item tuples to disambiguate defining a tuple or an expression surrounded by parentheses
+        print("Usage: %s /path/to/linux_src_dir" % (sys.argv[0],), file=sys.stderr)
         return 1
 
     _, _, kernel_version, _, cpu_arch = os.uname()
