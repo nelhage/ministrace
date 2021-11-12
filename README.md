@@ -13,7 +13,7 @@ ministrace was written for a [blog post][1], which explains in some
 detail how it works.
 
 [1]: http://blog.nelhage.com/2010/08/write-yourself-an-strace-in-70-lines-of-code/
----
+
 
 ## Compile
 0. Install Linux kernel sources (prerequisite)
@@ -22,7 +22,7 @@ detail how it works.
       * Install sources: `apt-get source linux`
 1. Change in `Makefile` the variable `LINUX_SRC` to the path of your kernel source (e.g., `/usr/src/linux-5.4.0`)
 2. Run `make` in project's root dir
----
+
 
 ## Usage
 ```ministrace [--stop-nr <syscall nr>|--stop-name <syscall name>] <program> [<args> ...]```
