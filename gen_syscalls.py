@@ -3,12 +3,6 @@
 '''
 Generates header file containing information for syscalls
 
-Requires linux kernel sources (of current system's kernel) under /usr/src/linux
-Installation of kernel sources:
-  (0) Add sources (for apt): Software & Updates -> Ubuntu Software -> Source Code
-  (1) Install sources: apt-get source linux
-
-
 TODOs: - x32 ABI (e.g., COMPAT_SYSCALL_DEFINE3, see https://en.wikipedia.org/wiki/X32_ABI)  ??
        - Wrong args for, e.g., `mmap`, `mprotect`. ... ??
 '''
