@@ -1,6 +1,12 @@
 ministrace
 ==========
 
+## About
+Fork of [ministrace by Nelson Elhage](https://github.com/nelhage/ministrace), which includes various refactorings.
+
+
+---
+## Original `README.md`
 ministrace is a small strace implementation by Nelson Elhage
 (@nelhage).
 
