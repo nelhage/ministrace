@@ -1,12 +1,6 @@
 ministrace
 ==========
 
-## About
-Fork of [ministrace by Nelson Elhage](https://github.com/nelhage/ministrace), which includes various refactorings.
-
-
----
-## Original `README.md`
 ministrace is a small strace implementation by Nelson Elhage
 (@nelhage).
 
@@ -23,21 +17,21 @@ detail how it works.
 Usage
 =====
 
-```ministrace [-n <system call name>|-s <system call int>] <program> <program args>```
+```ministrace [--stop-nr <syscall nr>|--stop-name <syscall name>] <program> [<args> ...]```
 
 Basic ministrace usage just takes a command line:
 
-```ministrace <program> <program args>```
+```ministrace <program> [<args> ...]```
 
 This will run the program provided with the given arguments, and print
 out a sequence of all the system calls which made by the program.
 
-You can also specify a specific system call, using `-n sys_call_name`
-or `-s sys_call_number`:
+You can also specify a specific system call, using `--stop-name sys_call_name`
+or `--stop-nr sys_call_number`, on which execution shall be paused:
 
 ```
-ministrace -n <system call name> <program> <program args>
-ministrace -s <system call int> <program> <program args>
+ministrace --stop-name <syscall name> <program> <program args>
+ministrace --stop-nr <syscall nr> <program> <program args>
 ```
 
 This will print out a sequence of system calls which are made, and
