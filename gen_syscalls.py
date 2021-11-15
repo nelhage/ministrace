@@ -4,9 +4,8 @@
 Generates header file containing information for syscalls
 
 TODOs: - x32 ABI (e.g., COMPAT_SYSCALL_DEFINE3, see https://en.wikipedia.org/wiki/X32_ABI)  ??
-       - Wrong args for, e.g., `mmap`, `mprotect`. ... ??
+       - Add exceptions for args which should be pointers (but are of type unsigned long ?), e.g., `mmap`, `mprotect`. ... ??
 '''
-
 import os
 import sys
 import re
@@ -43,7 +42,7 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir):
     syscalls_args = {}
     found_src_files = subprocess.Popen(["find"] +
                             [os.path.join(linux_src_dir, d) for d in
-                              "arch/x86 fs include ipc kernel mm net security".split()] +
+                                "arch/x86 fs include ipc kernel mm net security".split()] +
                             ["-name", "*.c", "-print"],
                             stdout = subprocess.PIPE).stdout
 
@@ -60,25 +59,26 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir):
             if found_start_of_syscall_code_fragment:
                 syscall_code_fragment += line
                 if line.endswith(')'):                                          # Found END of syscall definition
-                    parse_syscall_args(syscalls_args, syscall_code_fragment)
+                    parse_found_syscall_code_fragment(syscalls_args, syscall_code_fragment)
                     found_start_of_syscall_code_fragment = False
                 else:
                     syscall_code_fragment += " "                                # Append space indicating EOL ?
     return syscalls_args
 
-def parse_syscall_args(syscalls_args, syscall_code_fragment):
+def parse_found_syscall_code_fragment(syscalls_args, syscall_code_fragment):
     (syscall_name, parsed_syscall_arg_types) = None, None
+
     if syscall_code_fragment.startswith('SYSCALL_DEFINE('):
         m = re.search(r'^SYSCALL_DEFINE\(([^)]+)\)\(([^)]+)\)$', syscall_code_fragment)
         if not m:
-            print("Unable to parse:", syscall_code_fragment)
+            # print("Unable to parse:", syscall_code_fragment)
             return
         syscall_name, args = m.groups()
         parsed_syscall_arg_types = [s.strip().rsplit(" ", 1)[0] for s in args.split(",")]
     else:
         m = re.search(r'^SYSCALL_DEFINE(\d)\(([^,]+)\s*(?:,\s*([^)]+))?\)$', syscall_code_fragment)
         if not m:
-            print("Unable to parse:", syscall_code_fragment)
+            # print("Unable to parse:", syscall_code_fragment)
             return
         nargs, syscall_name, argstr = m.groups()
         if argstr is not None:
@@ -104,7 +104,7 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
 
   # - Array containing all syscalls -
     print("struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME,GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out)
-    syscalls_with_no_args = False
+    syscalls_with_no_parsed_args = False
     for num in sorted(syscalls_numbers.keys()):
         syscall_name = syscalls_numbers[num]
 
@@ -112,7 +112,7 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
             syscall_args = syscalls_args[syscall_name]
         else:
             syscall_args = ["void*"] * GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE
-            syscalls_with_no_args = True
+            syscalls_with_no_parsed_args = True
             print("/* WARNING: Found no args for syscall \"%s\", using default (all pointers) */" % (syscall_name,), file=out)
 
         print("  [%d] = {" % (num,), file=out)
@@ -128,7 +128,7 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
 
     out.close()
 
-    if syscalls_with_no_args:
+    if syscalls_with_no_parsed_args:
         print("WARNING: Some syscalls have missing args", file=sys.stderr)
 
 def parse_syscall_arg_type(arg_str):
