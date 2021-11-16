@@ -204,7 +204,13 @@ int wait_for_syscall(pid_t pid) {
         int child_proc_status;
 
     /* (0) Set next breakpoint (on next syscall) & wait (i.e., block) until hit */
-        ptrace(PTRACE_SYSCALL, pid, 0, 0);    /* Set breakpoint on next syscall */
+        /*
+         * ELUCIDATION:
+         *   - `PTRACE_SYSCALL`: Restarts stopped tracee (similar to `PTRACE_CONT`), but sets breakpoint at next syscall entry or exit
+         *        (Tracee will, as usual, be stopped upon receipt of a signal)
+         *        From the tracer's perspective, the tracee will appear to have been stopped by receipt of a `SIGTRAP`
+         */
+        ptrace(PTRACE_SYSCALL, pid, 0, 0);               /* Set breakpoint on next syscall */
         waitpid(pid, &child_proc_status, 0);             /* Wait (block) until breakpoint has been hit by child */
 
     /* (1) Return status of child process (0 = stopped, 1 = exited) */
@@ -226,6 +232,15 @@ int wait_for_syscall(pid_t pid) {
 
 
 long __get_reg(pid_t pid, size_t off_user_struct) {
+    /*
+     * ELUCIDATION:
+     *  - `PTRACE_PEEKTEXT`, `PTRACE_PEEKDATA`: Reads & returns a word at the `addr`ess in tracee's memory
+     *     (are equivalent since Linux doesn't have separate text- & data address spaces)
+     *  - `PTRACE_PEEKUSER`: Read & return a word at offset `addr` (must be word-aligned) in the
+     *     tracee's USER area (see <sys/user.h>), which holds the registers & other process information
+     *  - `PTRACE_GETREGS`, `PTRACE_GETFPREGS`: Copy tracee's general-purpose or floating-point
+     *     registers, respectively, to the address `data` in the tracer
+     */
     long reg_val = ptrace(PTRACE_PEEKUSER, pid, off_user_struct);
     if (errno) {
         perror("ptrace(PTRACE_PEEKUSER, pid, off)");

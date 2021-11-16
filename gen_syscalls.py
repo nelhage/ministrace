@@ -71,14 +71,14 @@ def parse_found_syscall_code_fragment(syscalls_args, syscall_code_fragment):
     if syscall_code_fragment.startswith('SYSCALL_DEFINE('):
         m = re.search(r'^SYSCALL_DEFINE\(([^)]+)\)\(([^)]+)\)$', syscall_code_fragment)
         if not m:
-            # print("Unable to parse:", syscall_code_fragment)
+            print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
             return
         syscall_name, args = m.groups()
         parsed_syscall_arg_types = [s.strip().rsplit(" ", 1)[0] for s in args.split(",")]
     else:
         m = re.search(r'^SYSCALL_DEFINE(\d)\(([^,]+)\s*(?:,\s*([^)]+))?\)$', syscall_code_fragment)
         if not m:
-            # print("Unable to parse:", syscall_code_fragment)
+            print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
             return
         nargs, syscall_name, argstr = m.groups()
         if argstr is not None:
@@ -98,7 +98,7 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
 
   # - Header of header file -
     header_guard_text = syscall_header_file.replace("-", "_").replace(".", "_").upper()
-    print("/**\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */\n", file=out)
+    print("/*\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */\n", file=out)
     print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out)
     print("\n#define SYSCALLS_CPU_ARCH \"%s\"\n#define SYSCALLS_KERNEL_VERSION \"%s\"\n\n#define MAX_SYSCALL_NUM %d\n\n" % (sys_info['arch'], sys_info['kernel'], max(syscalls_numbers.keys())), file=out)
 
