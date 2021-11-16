@@ -29,6 +29,9 @@
 #endif
 
 
+#define PTRACE_TRAP_INDICATOR_BIT (1 << 7)
+
+
 
 /* -- Function prototypes -- */
 int run_parent_tracer(pid_t pid, int stop_req_syscall_nr);
@@ -129,8 +132,9 @@ int main(int argc, char **argv) {
 
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- ----------------------------------------- */
 int run_parent_tracer(pid_t pid, int stop_req_syscall_nr) {
+/* (0) Set ptrace options */
     int child_proc_status;
-    if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
+    if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait for child (should stop itself by sending `SIGSTOP` to itself) */
         perror("`waitpid` failed");
         abort();
     }
@@ -144,7 +148,7 @@ int run_parent_tracer(pid_t pid, int stop_req_syscall_nr) {
     }
     /*
      * ELUCIDATION:
-     *  - `PTRACE_O_TRACESYSGOOD`: When delivering syscall traps, set bit 7 in the signal number (i.e., deliver SIGTRAP|0x80)
+     *  - `PTRACE_O_TRACESYSGOOD`: When delivering syscall traps, set bit 7 in the signal number (i.e., deliver SIGTRAP|0x80) (see `PTRACE_TRAP_INDICATOR_BIT`)
      *    -> Makes it easier (for tracer) to distinguish b/w normal- & from syscalls caused traps
      */
     ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACESYSGOOD);
@@ -161,6 +165,8 @@ int run_parent_tracer(pid_t pid, int stop_req_syscall_nr) {
         if (stop_req_syscall_nr <= MAX_SYSCALL_NUM && syscall_nr == stop_req_syscall_nr) {
             pause_until_user_input();
         }
+
+        // TODO: Pass relevant signals to child on following ptrace call
 
 
     /* Syscall EXIT (syscall return value) */
@@ -233,21 +239,26 @@ int wait_for_syscall_and_check_child_exited(pid_t pid) {
          *    - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
         if (WIFEXITED(child_proc_status)) {
-            // fprintf(stderr, "DEBUG: Child exited w/ return code %d\n", WEXITSTATUS(child_proc_status));
+            // fprintf(stderr, "Child exited w/ return code %d\n", WEXITSTATUS(child_proc_status));
             return 1;       /* Child has `exit`ed */
         }
         if (WIFSIGNALED(child_proc_status) ) {
-            // fprintf(stderr, "DEBUG: Child terminated w/ signal %d\n", WTERMSIG(child_proc_status));
+            // fprintf(stderr, "Child terminated w/ signal %d\n", WTERMSIG(child_proc_status));
             return 1;
         }
 
-        if (WIFSTOPPED(child_proc_status) && (WSTOPSIG(child_proc_status) & 0x80)) {
-            // fprintf(stderr, "DEBUG: Child stopped due to breakpoint\n");
-            return 0;       /* Child has stopped (due to syscall breakpoint) */
-        } else {
-            fprintf(stderr, "[stopped %d (%x)]\n", child_proc_status, WSTOPSIG(child_proc_status));       // Stopped by signal which wasn't caused by breakpoint
-            return 0;               // TODO ??
+        if (WIFSTOPPED(child_proc_status)) {
+            const int const signal_nr = WSTOPSIG(child_proc_status);
+            if (signal_nr & PTRACE_TRAP_INDICATOR_BIT) {
+                // fprintf(stderr, "Child stopped due to breakpoint (signal_nr=%d)\n", signal_nr - PTRACE_TRAP_INDICATOR_BIT);
+                return 0;       /* Child has stopped (due to syscall breakpoint) */
+            } else {
+                fprintf(stderr, "[stopped %d (%d)]\n", child_proc_status, signal_nr);       // Stopped by signal which wasn't caused by breakpoint
+                return 0;               // TODO ??
+            }
         }
+
+        return -1;  /* Unknown (should never happen ??) */
     }
 }
 
