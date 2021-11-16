@@ -25,7 +25,7 @@ detail how it works.
 
 
 ## Usage
-```ministrace [--stop-nr <syscall nr>|--stop-name <syscall name>] <program> [<args> ...]```
+```ministrace [--pause-snr <syscall nr>|--pause-sname <syscall name>] <program> [<args> ...]```
 
 Basic ministrace usage just takes a command line:
 
@@ -34,12 +34,12 @@ Basic ministrace usage just takes a command line:
 This will run the program provided with the given arguments, and print
 out a sequence of all the system calls which made by the program.
 
-You can also specify a specific system call, using `--stop-name sys_call_name`
-or `--stop-nr sys_call_number`, on which execution shall be paused:
+You can also specify a specific system call, using `--pause-sname sys_call_name`
+or `--pause-snr sys_call_number`, on which execution shall be paused:
 
 ```
-ministrace --stop-name <syscall name> <program> <program args>
-ministrace --stop-nr <syscall nr> <program> <program args>
+ministrace --pause-sname <syscall name> <program> <program args>
+ministrace --pause-snr <syscall nr> <program> <program args>
 ```
 
 This will print out a sequence of system calls which are made, and

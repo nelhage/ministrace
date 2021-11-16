@@ -15,6 +15,10 @@
 
 
 /* -- Global Macros -- */
+#define CLI_ARG_PAUSE_ON_SYSCALL_NR "--pause-snr"
+#define CLI_ARG_PAUSE_ON_SYSCALL_NAME "--pause-sname"
+
+
 /*
  * ELUCIDATION:
  *  - `ORIG_RAX` = Value of RAX BEFORE syscall (syscall nr)
@@ -56,7 +60,7 @@ char *read_string(pid_t pid, unsigned long addr);
 
 
 void usage(char **argv) {
-    fprintf(stderr, "Usage: %s [--stop-nr <syscall nr>|--stop-name <syscall name>] <program> [<args> ...]\n", argv[0]);
+    fprintf(stderr, "Usage: %s ["CLI_ARG_PAUSE_ON_SYSCALL_NR" <syscall nr>|"CLI_ARG_PAUSE_ON_SYSCALL_NAME" <syscall name>] <program> [<args> ...]\n", argv[0]);
     exit(1);
 }
 
@@ -71,8 +75,8 @@ int main(int argc, char **argv) {
     int stop_req_syscall_nr = -1;
 
     /* Passed using syscall nr */
-    if (!strcmp(argv[1], "--stop-nr")) {
-        if (argc < 4) {     /* ministrace, -s, execve, whoami */
+    if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NR)) {
+        if (argc < 4) {              /* E.g., ministrace, -s, execve, whoami */
             usage(argv);
         }
 
@@ -90,11 +94,11 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Err: %s is not a valid syscall\n", argv[2]);
             exit(1);
         }
-        child_args_offset += 2;      /* "-s", "<int>" */
+        child_args_offset += 2;      /* "--pause-snr", "<int>" */
 
     /* Passed using syscall name */
-    } else if (!strcmp(argv[1], "--stop-name")) {
-        if (argc < 4) {     /* ministrace, -n, 59, whoami */
+    } else if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NAME)) {
+        if (argc < 4) {              /* E.g., ministrace, -n, 59, whoami */
             usage(argv);
         }
         const char* const syscall_name = argv[2];
@@ -112,7 +116,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Err: Syscall w/ name \"%s\" doesn't exist\n", syscall_name);
             exit(1);
         }
-        child_args_offset += 2;      /* "-n", "<name>" */
+        child_args_offset += 2;      /* E.g., "-n", "<name>" */
     }
 
 
@@ -219,7 +223,7 @@ int wait_for_syscall_and_check_child_exited(pid_t pid) {
          *        (Tracee will, as usual, be stopped upon receipt of a signal)
          *        From the tracer's perspective, the tracee will appear to have been stopped by receipt of a `SIGTRAP`
          */
-        ptrace(PTRACE_SYSCALL, pid, 0, 0);               /* Set breakpoint on next syscall */
+        ptrace(PTRACE_SYSCALL, pid, NULL, NULL);         /* Set breakpoint on next syscall */
         if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
             perror("`waitpid` failed");
             abort();
