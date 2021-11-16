@@ -130,7 +130,10 @@ int main(int argc, char **argv) {
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- ----------------------------------------- */
 int run_parent_tracer(pid_t pid, int stop_req_syscall_nr) {
     int child_proc_status;
-    waitpid(pid, &child_proc_status, 0);
+    if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
+        perror("`waitpid` failed");
+        abort();
+    }
     /*
      * ELUCIDATION:
      *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
@@ -211,7 +214,10 @@ int wait_for_syscall_and_check_child_exited(pid_t pid) {
          *        From the tracer's perspective, the tracee will appear to have been stopped by receipt of a `SIGTRAP`
          */
         ptrace(PTRACE_SYSCALL, pid, 0, 0);               /* Set breakpoint on next syscall */
-        waitpid(pid, &child_proc_status, 0);             /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
+        if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
+            perror("`waitpid` failed");
+            abort();
+        }
 
     /* (1) Return status of child process (0 = stopped, 1 = exited) */
         /*
