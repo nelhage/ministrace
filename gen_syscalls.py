@@ -26,6 +26,23 @@ GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE = 6
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
+class FoundSyscallFragment:
+    def __init__(self, extracted_code_fragment, line_nr, file):
+        self.extracted_code_fragment = extracted_code_fragment
+        self.line_nr = line_nr
+        self.file = file.decode("utf-8").replace("\n", "")
+
+    def __str__(self):
+        return f"{self.file}:{self.line_nr}: {self.extracted_code_fragment}"
+
+
+class ParsedFoundSyscallFragment:
+    def __init__(self, found_code_fragment: FoundSyscallFragment, parsed_args: list):
+        self.found_code_fragment = found_code_fragment
+        self.parsed_args = parsed_args
+
+
+
 def parse_syscall_numbers_from_tbl(tbl_file):
     syscalls = {}
     for line in open(tbl_file):
@@ -49,37 +66,44 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir):
     for src_file_path in found_src_files:
         src_file = open(src_file_path.strip())
 
-        syscall_code_fragment = ''
         found_start_of_syscall_code_fragment = False
-        for line in src_file:
+        syscall_code_fragment = ''
+        syscall_code_fragment_line_start = -1
+        for line_nr, line in enumerate(src_file):
             line = line.strip()
-            if not found_start_of_syscall_code_fragment and 'SYSCALL_DEFINE' in line:
+            if not found_start_of_syscall_code_fragment and 'SYSCALL_DEFINE' in line:   # Found new potential syscall fragment ...
                 syscall_code_fragment = ''
+                syscall_code_fragment_line_start = line_nr +1
                 found_start_of_syscall_code_fragment = True
             if found_start_of_syscall_code_fragment:
                 syscall_code_fragment += line
-                if line.endswith(')'):                                          # Found END of syscall definition
-                    parse_found_syscall_code_fragment(syscalls_args, syscall_code_fragment)
+                if line.endswith(')'):                                                  # Found END of syscall definition
+                    (syscall_name, parsed_syscall_args) = parse_found_syscall_code_fragment(syscall_code_fragment)
+                    if syscall_name is not None:
+                        syscalls_args[syscall_name] = ParsedFoundSyscallFragment(
+                            FoundSyscallFragment(syscall_code_fragment, syscall_code_fragment_line_start, src_file_path),
+                            parsed_syscall_args)
                     found_start_of_syscall_code_fragment = False
+                    syscall_code_fragment_line_start = -1
                 else:
                     syscall_code_fragment += " "                                # Append space indicating EOL ?
     return syscalls_args
 
-def parse_found_syscall_code_fragment(syscalls_args, syscall_code_fragment):
+def parse_found_syscall_code_fragment(syscall_code_fragment):
     (syscall_name, parsed_syscall_arg_types) = None, None
 
     if syscall_code_fragment.startswith('SYSCALL_DEFINE('):
         m = re.search(r'^SYSCALL_DEFINE\(([^)]+)\)\(([^)]+)\)$', syscall_code_fragment)
         if not m:
             print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
-            return
+            return (None, None)
         syscall_name, args = m.groups()
         parsed_syscall_arg_types = [s.strip().rsplit(" ", 1)[0] for s in args.split(",")]
     else:
         m = re.search(r'^SYSCALL_DEFINE(\d)\(([^,]+)\s*(?:,\s*([^)]+))?\)$', syscall_code_fragment)
         if not m:
             print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
-            return
+            return (None, None)
         nargs, syscall_name, argstr = m.groups()
         if argstr is not None:
             argspec = [s.strip() for s in argstr.split(",")]
@@ -87,12 +111,12 @@ def parse_found_syscall_code_fragment(syscalls_args, syscall_code_fragment):
         else:
             parsed_syscall_arg_types = []
 
-    syscalls_args[syscall_name] = parsed_syscall_arg_types
+    return (syscall_name, parsed_syscall_arg_types)
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
-def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, syscalls_args):
+def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, syscalls_code_fragment_parsed_args):
     out = open(syscall_header_file, 'w')
 
 
@@ -108,18 +132,20 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
     for num in sorted(syscalls_numbers.keys()):
         syscall_name = syscalls_numbers[num]
 
-        if syscall_name in syscalls_args:
-            syscall_args = syscalls_args[syscall_name]
+        if syscall_name in syscalls_code_fragment_parsed_args:
+            syscall_code_fragment = syscalls_code_fragment_parsed_args[syscall_name].found_code_fragment
+            parsed_syscall_args = syscalls_code_fragment_parsed_args[syscall_name].parsed_args
+            print(f"/* {syscall_code_fragment} */", file=out)
         else:
-            syscall_args = ["void*"] * GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE
+            parsed_syscall_args = ["void*"] * GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE
             syscalls_with_no_parsed_args = True
             print("/* WARNING: Found no args for syscall \"%s\", using default (all pointers) */" % (syscall_name,), file=out)
 
         print("  [%d] = {" % (num,), file=out)
         print("    .name  = \"%s\"," % (syscall_name,), file=out)
-        print("    .nargs = %d," % (len(syscall_args,)), file=out)
+        print("    .nargs = %d," % (len(parsed_syscall_args,)), file=out)
         out.write(   "    .args  = {")
-        out.write(", ".join([parse_syscall_arg_type(t) for t in syscall_args] + ["-1"] * (6 - len(syscall_args))))  # `-1` means N/A
+        out.write(", ".join([parse_syscall_arg_type(t) for t in parsed_syscall_args] + ["-1"] * (6 - len(parsed_syscall_args))))  # `-1` means N/A
         out.write("}},\n");
     print("};", file=out)
 
@@ -152,11 +178,11 @@ def main(args):
     tbl_file_basedir = "./arch/x86/entry/syscalls/"
     tbl_file = "syscall_64.tbl" if cpu_arch == 'x86_64' else "syscall_32.tbl"
     parsed_syscalls_name_number = parse_syscall_numbers_from_tbl(os.path.join(linux_src_dir, tbl_file_basedir, tbl_file))
-    parsed_syscalls_args = find_and_parse_syscalls_args_from_src(linux_src_dir)
+    syscalls_code_fragment_parsed_args = find_and_parse_syscalls_args_from_src(linux_src_dir)
 
     generate_syscalls_header(GENERATED_HEADER_FILE,
             { "arch": cpu_arch, "kernel": kernel_version },
-            parsed_syscalls_name_number, parsed_syscalls_args)
+            parsed_syscalls_name_number, syscalls_code_fragment_parsed_args)
 
 
 if __name__ == '__main__':
