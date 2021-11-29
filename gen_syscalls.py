@@ -34,7 +34,7 @@ class TBLParsedSyscall:
         self.entry_point = entry_point
 
 
-class FoundSyscallFragment:
+class SRCFoundSyscallFragment:
     def __init__(self, extracted_code_fragment, line_nr, file):
         self.extracted_code_fragment = extracted_code_fragment
         self.line_nr = line_nr
@@ -44,8 +44,8 @@ class FoundSyscallFragment:
         return f"{self.file}:{self.line_nr}: {self.extracted_code_fragment}"
 
 
-class ParsedFoundSyscallFragment:
-    def __init__(self, found_code_fragment: FoundSyscallFragment, parsed_args: list):
+class SRCParsedFoundSyscallFragment:
+    def __init__(self, found_code_fragment: SRCFoundSyscallFragment, parsed_args: list):
         self.found_code_fragment = found_code_fragment
         self.parsed_args = parsed_args
 
@@ -87,8 +87,8 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir: str) -> dict:
                 if line.endswith(')'):                                                  # Found END of syscall definition
                     (syscall_name, parsed_syscall_args) = parse_found_syscall_code_fragment(syscall_code_fragment)
                     if syscall_name is not None:
-                        syscalls_args[syscall_name] = ParsedFoundSyscallFragment(
-                            FoundSyscallFragment(syscall_code_fragment, syscall_code_fragment_line_start, src_file_path),
+                        syscalls_args[syscall_name] = SRCParsedFoundSyscallFragment(
+                            SRCFoundSyscallFragment(syscall_code_fragment, syscall_code_fragment_line_start, src_file_path),
                             parsed_syscall_args)
                     found_start_of_syscall_code_fragment = False
                     syscall_code_fragment_line_start = -1
@@ -133,7 +133,8 @@ def generate_syscalls_header(syscall_header_file: str, sys_info: dict,
     print("/*\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */", file=out)
     print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out)
     # print(f"#define SYSCALLS_CPU_ARCH \"{sys_info['arch']}\"\n#define SYSCALLS_KERNEL_VERSION \"{sys_info['kernel']}\"", file=out)
-    print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}\n\n", file=out)
+    print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out)
+    print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}\n\n", file=out)
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
 
