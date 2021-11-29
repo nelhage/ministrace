@@ -26,6 +26,14 @@ GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE = 6
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
+class TBLParsedSyscall:
+    def __init__(self, number, abi, name, entry_point=None):
+        self.number = int(number)
+        self.abi = abi
+        self.name = name
+        self.entry_point = entry_point
+
+
 class FoundSyscallFragment:
     def __init__(self, extracted_code_fragment, line_nr, file):
         self.extracted_code_fragment = extracted_code_fragment
@@ -43,19 +51,18 @@ class ParsedFoundSyscallFragment:
 
 
 
-def parse_syscall_numbers_from_tbl(tbl_file):
+def parse_syscalls_name_and_nr_from_tbl(tbl_file: str) -> dict:
     syscalls = {}
     for line in open(tbl_file):
-        m = re.search(r'^(\d+)\t.+?\t(.+?)(\t.+)?$', line)
+        m = re.search(r'^(\d+)\t(.+?)\t(.+?)(?:\t+(.+))?$', line)       # <number> <abi> <name> <entry point>
         if m:
-            (number, name, _) = m.groups()
-            number = int(number)
-            syscalls[number] = name
+            (nr, abi, name, entry_point) = m.groups()
+            syscalls[int(nr)] = TBLParsedSyscall(nr, abi, name, entry_point)
     return syscalls
 
 
 
-def find_and_parse_syscalls_args_from_src(linux_src_dir):
+def find_and_parse_syscalls_args_from_src(linux_src_dir: str) -> dict:
     syscalls_args = {}
     found_src_files = subprocess.Popen(["find"] +
                             [os.path.join(linux_src_dir, d) for d in
@@ -89,7 +96,7 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir):
                     syscall_code_fragment += " "                                # Append space indicating EOL ?
     return syscalls_args
 
-def parse_found_syscall_code_fragment(syscall_code_fragment):
+def parse_found_syscall_code_fragment(syscall_code_fragment: str) -> tuple:
     (syscall_name, parsed_syscall_arg_types) = None, None
 
     if syscall_code_fragment.startswith('SYSCALL_DEFINE('):
@@ -100,7 +107,7 @@ def parse_found_syscall_code_fragment(syscall_code_fragment):
         syscall_name, args = m.groups()
         parsed_syscall_arg_types = [s.strip().rsplit(" ", 1)[0] for s in args.split(",")]
     else:
-        m = re.search(r'^SYSCALL_DEFINE(\d)\(([^,]+)\s*(?:,\s*([^)]+))?\)$', syscall_code_fragment)
+        m = re.search(r'^(?:COMPAT_)?SYSCALL_DEFINE(\d)\(([^,]+)\s*(?:,\s*([^)]+))?\)$', syscall_code_fragment)
         if not m:
             print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
             return (None, None)
@@ -116,32 +123,47 @@ def parse_found_syscall_code_fragment(syscall_code_fragment):
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
-def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, syscalls_code_fragment_parsed_args):
+def generate_syscalls_header(syscall_header_file: str, sys_info: dict,
+            syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
     out = open(syscall_header_file, 'w')
 
 
   # - Header of header file -
     header_guard_text = syscall_header_file.replace("-", "_").replace(".", "_").upper()
-    print("/*\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */\n", file=out)
+    print("/*\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */", file=out)
     print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out)
-    print("\n#define SYSCALLS_CPU_ARCH \"%s\"\n#define SYSCALLS_KERNEL_VERSION \"%s\"\n\n#define MAX_SYSCALL_NUM %d\n\n" % (sys_info['arch'], sys_info['kernel'], max(syscalls_numbers.keys())), file=out)
+    # print(f"#define SYSCALLS_CPU_ARCH \"{sys_info['arch']}\"\n#define SYSCALLS_KERNEL_VERSION \"{sys_info['kernel']}\"", file=out)
+    print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}\n\n", file=out)
+
+    generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
+
+  # - Macro constants for indexing syscall array -
+    print("/* -- Array index consts (see also header file `/usr/include/x86_64-linux-gnu/asm/unistd_64.h`) -- */", file=out)
+    for num in sorted(syscalls_parsed_from_tbl.keys()):
+        syscall_name = syscalls_parsed_from_tbl[num].name
+        syscall_abi = syscalls_parsed_from_tbl[num].abi
+        print(f"#define {generate_syscall_macro_name(syscall_name, syscall_abi)} {num}", file=out)
+
+    print("\n\n", file=out)
 
   # - Array containing all syscalls -
+    print("/* -- Parsed syscalls as array -- */", file=out)
     print("struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME,GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out)
     syscalls_with_no_parsed_args = False
-    for num in sorted(syscalls_numbers.keys()):
-        syscall_name = syscalls_numbers[num]
+    for num in sorted(syscalls_parsed_from_tbl.keys()):
+        syscall_name = syscalls_parsed_from_tbl[num].name
+        syscall_abi = syscalls_parsed_from_tbl[num].abi
 
-        if syscall_name in syscalls_code_fragment_parsed_args:
-            syscall_code_fragment = syscalls_code_fragment_parsed_args[syscall_name].found_code_fragment
-            parsed_syscall_args = syscalls_code_fragment_parsed_args[syscall_name].parsed_args
+        if syscall_name in syscalls_parsed_from_scr:
+            syscall_code_fragment = syscalls_parsed_from_scr[syscall_name].found_code_fragment
+            parsed_syscall_args = syscalls_parsed_from_scr[syscall_name].parsed_args
             print(f"/* {syscall_code_fragment} */", file=out)
         else:
             parsed_syscall_args = ["void*"] * GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE
             syscalls_with_no_parsed_args = True
             print("/* WARNING: Found no args for syscall \"%s\", using default (all pointers) */" % (syscall_name,), file=out)
 
-        print("  [%d] = {" % (num,), file=out)
+        print("  [%s] = {" % (generate_syscall_macro_name(syscall_name, syscall_abi),), file=out)
         print("    .name  = \"%s\"," % (syscall_name,), file=out)
         print("    .nargs = %d," % (len(parsed_syscall_args,)), file=out)
         out.write(   "    .args  = {")
@@ -149,7 +171,8 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
         out.write("}},\n");
     print("};", file=out)
 
-    print("\n\n#endif /* %s */" % (header_guard_text,), file=out)
+  # - End of header file (guard) -
+    print(f"\n#endif /* {header_guard_text} */", file=out)
 
 
     out.close()
@@ -157,7 +180,7 @@ def generate_syscalls_header(syscall_header_file, sys_info, syscalls_numbers, sy
     if syscalls_with_no_parsed_args:
         print("WARNING: Some syscalls have missing args", file=sys.stderr)
 
-def parse_syscall_arg_type(arg_str):
+def parse_syscall_arg_type(arg_str: str) -> GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
     if re.search(r'^(const\s*)?char\s*(__user\s*)?\*\s*$', arg_str):
         return GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM.STR
     if arg_str.endswith('*'):
@@ -177,12 +200,13 @@ def main(args):
     linux_src_dir = args[0]
     tbl_file_basedir = "./arch/x86/entry/syscalls/"
     tbl_file = "syscall_64.tbl" if cpu_arch == 'x86_64' else "syscall_32.tbl"
-    parsed_syscalls_name_number = parse_syscall_numbers_from_tbl(os.path.join(linux_src_dir, tbl_file_basedir, tbl_file))
-    syscalls_code_fragment_parsed_args = find_and_parse_syscalls_args_from_src(linux_src_dir)
+
+    syscalls_parsed_from_tbl = parse_syscalls_name_and_nr_from_tbl(os.path.join(linux_src_dir, tbl_file_basedir, tbl_file))
+    syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir)
 
     generate_syscalls_header(GENERATED_HEADER_FILE,
             { "arch": cpu_arch, "kernel": kernel_version },
-            parsed_syscalls_name_number, syscalls_code_fragment_parsed_args)
+            syscalls_parsed_from_tbl, syscalls_parsed_from_scr)
 
 
 if __name__ == '__main__':
