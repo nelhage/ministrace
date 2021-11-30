@@ -149,7 +149,7 @@ def generate_syscalls_header(syscall_header_file: str, sys_info: dict,
 
   # - Array containing all syscalls -
     print("/* -- Parsed syscalls as array -- */", file=out)
-    print("struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME,GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out)
+    print("const struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out)
     syscalls_with_no_parsed_args = False
     for num in sorted(syscalls_parsed_from_tbl.keys()):
         syscall_name = syscalls_parsed_from_tbl[num].name

@@ -7,8 +7,8 @@ enum argtype {
     ARG_STR
 };
 
-struct syscall_entry {
+typedef struct syscall_entry {
     const char* const name;
     const int nargs;
     const enum argtype args[SYSCALL_MAX_ARGS];
-};
+} syscall_entry;
