@@ -58,7 +58,7 @@ void print_syscall_args(pid_t pid, int syscall_nr);
 long get_syscall_arg(pid_t pid, int which);
 char *read_string(pid_t pid, unsigned long addr);
 
-void print_str_raw(FILE * restrict stream, char* str);
+void fprint_str_esc(FILE* restrict stream, char* str);
 
 
 
@@ -319,7 +319,7 @@ void print_syscall_args(pid_t pid, int syscall_nr) {
     }
     for (int arg_nr = 0; arg_nr < nargs; arg_nr++) {
         long arg = get_syscall_arg(pid, arg_nr);
-        long type = ent ? ent->args[arg_nr] : ARG_PTR;
+        long type = ent ? ent->args[arg_nr] : ARG_PTR;      /* Default to `ARG_PTR` */
         switch (type) {
             case ARG_INT:
                 fprintf(stderr, "%ld", arg);
@@ -327,7 +327,7 @@ void print_syscall_args(pid_t pid, int syscall_nr) {
             case ARG_STR: {
                 char * strval = read_string(pid, arg);
                 // fprintf(stderr, "\"%s\"", strval);
-                print_str_raw(stderr, strval);
+                fprint_str_esc(stderr, strval);
                 free(strval);
                 break;
             }
@@ -340,8 +340,10 @@ void print_syscall_args(pid_t pid, int syscall_nr) {
     }
 }
 
-/**
- * Note: Syscall args (up to 6) are passed (on amd64) in rdi, rsi, rdx, r10, r8, and r9
+/*
+ * ELUCIDATION:
+ *   Syscall args (up to 6) are passed on
+ *      amd64 in rdi, rsi, rdx, r10, r8, and r9
  */
 long get_syscall_arg(pid_t pid, int which) {
     switch (which) {
@@ -363,6 +365,7 @@ long get_syscall_arg(pid_t pid, int which) {
         default: return -1L;
     }
 }
+
 
 char *read_string(pid_t pid, unsigned long addr) {
     size_t read_str_size_bytes = 2048;
@@ -403,7 +406,7 @@ char *read_string(pid_t pid, unsigned long addr) {
 
 
 /* - Misc. - */
-void print_str_raw(FILE * restrict stream, char* str) {
+void fprint_str_esc(FILE* restrict stream, char* str) {
     setlocale(LC_ALL, "C");
 
     for (int i = 0; '\0' != str[i]; i++) {
