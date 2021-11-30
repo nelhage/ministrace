@@ -8,6 +8,7 @@
 #include <stdio.h>                  /* perror, fprintf, stderr */
 #include <errno.h>                  /* errno, ERANGE */
 #include <string.h>                 /* strcmp, memcpy, memchr */
+#include <stdbool.h>                /* bool, true, false */
 
 #include <ctype.h>                  /* isprint */
 #include <locale.h>                 /* setlocale, LC_ALL */
@@ -43,7 +44,7 @@
 int run_parent_tracer(pid_t pid, int pause_on_syscall_nr);
 int run_child_tracee(int argc, char **argv);
 
-int wait_for_syscall_and_check_child_exited(pid_t pid);
+bool wait_for_syscall_or_check_child_exited(pid_t pid);
 long __get_reg_content(pid_t pid, size_t off_user_struct);
 
 #define offsetof(a, b) __builtin_offsetof(a, b)
@@ -163,7 +164,7 @@ int run_parent_tracer(pid_t pid, int pause_on_syscall_nr) {
 /* (1) Trace */
     while(1) {
     /* Syscall ENTER: Print syscall (based on retrieved syscall nr) */
-        if (wait_for_syscall_and_check_child_exited(pid) != 0) break;
+        if (wait_for_syscall_or_check_child_exited(pid)) break;
         const long syscall_nr = get_reg_content(pid, REG_SYSCALL_NR);
         print_syscall(pid, syscall_nr);
 
@@ -173,11 +174,9 @@ int run_parent_tracer(pid_t pid, int pause_on_syscall_nr) {
             pause_until_user_input();
         }
 
-        // TODO: signal_nr Pass relevant signals to child on following ptrace call
-
 
     /* Syscall EXIT (syscall return value) */
-        if (wait_for_syscall_and_check_child_exited(pid) != 0) break;
+        if (wait_for_syscall_or_check_child_exited(pid)) break;
         const long syscall_rtn_val = get_reg_content(pid, REG_SYSCALL_RTN_VAL);
         fprintf(stderr, "%ld\n", syscall_rtn_val);
     }
@@ -215,10 +214,10 @@ void pause_until_user_input(void) {
 }
 
 
-int wait_for_syscall_and_check_child_exited(pid_t pid) {
-    while (1) {
-        int child_proc_status;
+bool wait_for_syscall_or_check_child_exited(pid_t pid) {
+    int child_last_and_next_sig_nr = 0;
 
+    while (1) {
     /* (0) Set next breakpoint (on next syscall) & wait (i.e., block) until hit */
         /*
          * ELUCIDATION:
@@ -226,16 +225,15 @@ int wait_for_syscall_and_check_child_exited(pid_t pid) {
          *        (Tracee will, as usual, be stopped upon receipt of a signal)
          *        From the tracer's perspective, the tracee will appear to have been stopped by receipt of a `SIGTRAP`
          */
-        ptrace(PTRACE_SYSCALL, pid, 0, 0);         /* Set breakpoint on next syscall AND TODO: pass last sig nr to child */
+        ptrace(PTRACE_SYSCALL, pid, 0, child_last_and_next_sig_nr);               /* Set breakpoint on next syscall AND pass last sig nr to child */
 
-        // TODO: signal_nr
-
+        int child_proc_status;
         if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
             perror("`waitpid` failed");
             abort();
         }
 
-    /* (1) Return status of child process (0 = stopped, 1 = exited) */
+    /* (1) Check child process's status */
         /*
          * ELUCIDATION - Process Completion Status:
          *  - `int WIFEXITED (int status)`: Returns nonzero value if child process terminated normally w/ `exit` or `_exit`
@@ -248,12 +246,27 @@ int wait_for_syscall_and_check_child_exited(pid_t pid) {
          *  - `int WIFSTOPPED (int status)`: Returns nonzero value if child is stopped
          *    - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
-        if (WIFSTOPPED(child_proc_status) && WSTOPSIG(child_proc_status) & PTRACE_TRAP_INDICATOR_BIT)
-            return 0;       /* Child has stopped (due to syscall breakpoint) */
-        if (WIFEXITED(child_proc_status))
-            return 1;       /* Child has exited */
+    /* -- Child has exited -> STOP tracer -- */
+        if (WIFEXITED(child_proc_status)) {
+            // fprintf(stderr, "DEBUG: Child exited w/ return code %d\n", WEXITSTATUS(child_proc_status));
+            return true;       /* Child has `exit`ed */
 
-        fprintf(stderr, "[stopped %d (%x)]\n", child_proc_status, WSTOPSIG(child_proc_status));       // ???
+        } else if (WIFSIGNALED(child_proc_status)) {
+            // fprintf(stderr, "DEBUG: Child terminated w/ signal %d\n", WTERMSIG(child_proc_status));
+            return true;
+
+    /* -- Child was stopped -> Options: (a) signal (b) breakpoint was hit -- */
+        } else if (WIFSTOPPED(child_proc_status)) {
+            const int signal_nr = WSTOPSIG(child_proc_status);
+
+            if (signal_nr & PTRACE_TRAP_INDICATOR_BIT) {
+                return false;       /* Child was stopped (due to syscall breakpoint) -> extract syscall info */
+            }
+
+            /* Child was stopped by sent signal -> continue spinning ... */
+            // fprintf(stderr, "DEBUG: [stopped %d (%x)]\n", child_proc_status, signal_nr);       // Stopped by signal which wasn't caused by breakpoint
+            child_last_and_next_sig_nr = (signal_nr != SIGTRAP) ? (signal_nr) : (0);
+        }
     }
 }
 
