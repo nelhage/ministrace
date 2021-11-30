@@ -246,27 +246,12 @@ int wait_for_syscall_and_check_child_exited(pid_t pid) {
          *  - `int WIFSTOPPED (int status)`: Returns nonzero value if child is stopped
          *    - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
-        if (WIFEXITED(child_proc_status)) {
-            // fprintf(stderr, "Child exited w/ return code %d\n", WEXITSTATUS(child_proc_status));
-            return 1;       /* Child has `exit`ed */
-        }
-        if (WIFSIGNALED(child_proc_status) ) {
-            // fprintf(stderr, "Child terminated w/ signal %d\n", WTERMSIG(child_proc_status));
-            return 1;
-        }
+        if (WIFSTOPPED(child_proc_status) && WSTOPSIG(child_proc_status) & PTRACE_TRAP_INDICATOR_BIT)
+            return 0;       /* Child has stopped (due to syscall breakpoint) */
+        if (WIFEXITED(child_proc_status))
+            return 1;       /* Child has exited */
 
-        if (WIFSTOPPED(child_proc_status)) {
-            const int const signal_nr = WSTOPSIG(child_proc_status);
-            if (signal_nr & PTRACE_TRAP_INDICATOR_BIT) {
-                // fprintf(stderr, "Child stopped due to breakpoint (signal_nr=%d)\n", signal_nr - PTRACE_TRAP_INDICATOR_BIT);
-                return 0;       /* Child has stopped (due to syscall breakpoint) */
-            } else {
-                fprintf(stderr, "[stopped %d (%d)]\n", child_proc_status, signal_nr);       // Stopped by signal which wasn't caused by breakpoint
-                return 0;               // TODO ??
-            }
-        }
-
-        return -1;  /* Unknown (should never happen ??) */
+        fprintf(stderr, "[stopped %d (%x)]\n", child_proc_status, WSTOPSIG(child_proc_status));       // ???
     }
 }
 
