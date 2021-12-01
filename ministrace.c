@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
         usage(argv);
     }
 
-  /* - Check whether ONLY a specific syscall shall be traced - */
+  /* - Check whether tracing shall be paused on specific syscall - */
     int child_args_offset = 1;       /* executable itself */
     int pause_on_syscall_nr = -1;
 
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
         }
         child_args_offset += 2;      /* "--pause-snr", "<int>" */
 
-    /* Passed using syscall name; WARNING/ISSUE: x32 may have same name as x64 syscalls */
+    /* Passed using syscall name; WARNING/ISSUE: x32 ABI syscalls have same name as x64 syscalls and appear later in `syscalls` */
     } else if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NAME)) {
         if (argc < 4) {              /* E.g., ministrace, -n, 59, whoami */
             usage(argv);
