@@ -134,7 +134,8 @@ def generate_syscalls_header(syscall_header_file: str, sys_info: dict,
     print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out)
     # print(f"#define SYSCALLS_CPU_ARCH \"{sys_info['arch']}\"\n#define SYSCALLS_KERNEL_VERSION \"{sys_info['kernel']}\"", file=out)
     print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out)
-    print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}\n\n", file=out)
+    print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}", file=out)
+    print("#define SYSCALLS_ARR_SIZE (sizeof(syscalls) / sizeof(*syscalls))\n\n", file=out)
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
 

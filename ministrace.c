@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
         }
         const char* const syscall_name = argv[2];
 
-        for (int i = 0; i < (sizeof(syscalls) / sizeof(*syscalls)); i++) {
+        for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
             const syscall_entry* const ent = &syscalls[i];
             if (NULL != ent->name && !strcmp(syscall_name, ent->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
                 pause_on_syscall_nr = i;
