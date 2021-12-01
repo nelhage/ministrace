@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 Generates header file containing information for syscalls
 
-TODOs: - x32 ABI (e.g., COMPAT_SYSCALL_DEFINE3, see https://en.wikipedia.org/wiki/X32_ABI)  ??
+TODOs: - ARM support
        - Add exceptions for args which should be pointers (but are of type unsigned long ?), e.g., `mmap`, `mprotect`. ... ??
 '''
 import os
