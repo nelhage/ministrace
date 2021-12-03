@@ -1,15 +1,14 @@
 /**
  * TODOs:
- *   - CONSISTENT ERROR HANDLING MACRO
  *   - ARM SUPPORT ??
  */
 #include <sys/ptrace.h>             /* ptrace, PTRACE_TRACEME, PTRACE_SETOPTIONS, PTRACE_O_TRACESYSGOOD, PTRACE_SYSCALL */
 #include <bits/types.h>             /* eax, orig_eax, ebx, ecx, edx, esi, edi, ebp, rax, orig_rax, rdi, rsi, rdx, r10, r8, r9 */
 #include <sys/user.h>               /* struct user, struct user_regs_struct regs */
 #include <sys/wait.h>               /* waitpid, WIFSTOPPED, WSTOPSIG, WIFEXITED */
-#include <sys/types.h>              /* kill, SIGSTOP, SIGTRAP */
+#include <signal.h>                 /* kill, SIGSTOP, SIGTRAP */
 #include <unistd.h>                 /* fork, pid_t, execvp, getpid */
-#include <stdlib.h>                 /* NULL, abort, exit, strtol, malloc, realloc, free */
+#include <stdlib.h>                 /* NULL, exit, strtol, malloc, realloc, free */
 #include <stdio.h>                  /* perror, fprintf, stderr */
 #include <errno.h>                  /* errno, ERANGE */
 #include <string.h>                 /* strcmp, memcpy, memchr */
@@ -41,6 +40,15 @@
 
 
 #define PTRACE_TRAP_INDICATOR_BIT (1 << 7)
+
+
+/* - Error handling marcos - */
+#define PRINT_ERR(MSG) fprintf(stderr, "ERROR (" __FILE__ ":%d) -- %s\n", __LINE__, (MSG))
+
+#define DIE_WHEN_ERRNO(FUNC) ({ \
+    int __val = (FUNC); \
+    (-1 == __val ? ({ PRINT_ERR(strerror(errno)); exit(1); -1; }) : __val); \
+})
 
 
 
@@ -129,11 +137,7 @@ int main(int argc, char **argv) {
 
 
 /* (0.) Fork child (gets args passed) */
-    pid_t pid;
-    if ((pid = fork()) < 0) {
-        perror("fork() failed");
-        return 1;
-    }
+    pid_t pid = DIE_WHEN_ERRNO(fork());
 
     return (!pid) ?
          (run_child_tracee(argc - child_args_offset, argv + child_args_offset)) :
@@ -146,17 +150,14 @@ int main(int argc, char **argv) {
 int run_parent_tracer(pid_t pid, int pause_on_syscall_nr) {
 /* (0) Set ptrace options */
     int child_proc_status;
-    if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait for child (should stop itself by sending `SIGSTOP` to itself) */
-        perror("`waitpid` failed");
-        abort();
-    }
+    DIE_WHEN_ERRNO(waitpid(pid, &child_proc_status, 0));
     /*
      * ELUCIDATION:
      *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
      */
     if (!WIFSTOPPED(child_proc_status)) {
-        fprintf(stderr, "Couldn't stop child process\n");
-        abort();
+        PRINT_ERR("Couldn't stop child process");
+        exit(1);
     }
     /*
      * ELUCIDATION:
@@ -204,7 +205,7 @@ int run_child_tracee(int argc, char **argv) {
 
 /* Error handling (in case exec failed) */
     fprintf(stderr, "Couldn't exec \"%s\"\n", child_exec);
-    abort();
+    exit(1);
 }
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- ----------------------------------------- */
 
@@ -232,10 +233,7 @@ bool wait_for_syscall_or_check_child_exited(pid_t pid) {
         ptrace(PTRACE_SYSCALL, pid, 0, child_last_and_next_sig_nr);               /* Set breakpoint on next syscall AND pass last sig nr to child */
 
         int child_proc_status;
-        if (waitpid(pid, &child_proc_status, 0) < 0) {   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
-            perror("`waitpid` failed");
-            abort();
-        }
+        DIE_WHEN_ERRNO(waitpid(pid, &child_proc_status, 0));   /* Wait (i.e., block) until child changes state (e.g., hits breakpoint) */
 
     /* (1) Check child process's status */
         /*
@@ -287,8 +285,8 @@ long __get_reg_content(pid_t pid, size_t off_user_struct) {
      */
     long reg_val = ptrace(PTRACE_PEEKUSER, pid, off_user_struct);
     if (errno) {
-        perror("ptrace(PTRACE_PEEKUSER, pid, off)");
-        abort();
+        PRINT_ERR(strerror(errno));
+        exit(1);
     }
     return reg_val;
 }
@@ -374,13 +372,14 @@ long get_syscall_arg(pid_t pid, int which) {
 
 
 char *read_string(pid_t pid, unsigned long addr) {
-    size_t read_str_size_bytes = 2048;
     char *read_str;
+    size_t read_str_size_bytes = 2048;
 /* Allocate memory as buffer for string to be read */
     if (!(read_str = malloc(read_str_size_bytes))) {
-        fprintf(stderr, "malloc: Failed to allocate %zu bytes\n", read_str_size_bytes);
-        abort();
+        PRINT_ERR("malloc: Failed to allocate memory");
+        exit(1);
     }
+    
     size_t read_bytes = 0;
     unsigned long ptrace_read_word;
     while (1) {
@@ -388,8 +387,8 @@ char *read_string(pid_t pid, unsigned long addr) {
         if (read_bytes + sizeof(ptrace_read_word) > read_str_size_bytes) {
             read_str_size_bytes *= 2;
             if (!(read_str = realloc(read_str, read_str_size_bytes))) {
-                fprintf(stderr, "realloc: Failed to allocate %zu bytes\n", read_str_size_bytes);
-                abort();
+                PRINT_ERR("realloc: Failed to allocate memory");
+                exit(1);
             }
         }
     /* Read from tracee (each time one word) */
