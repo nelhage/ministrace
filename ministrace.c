@@ -75,23 +75,23 @@ void fprint_str_esc(FILE* restrict stream, char* str);
 
 
 
-
+/* - Cli args - */
 void usage(char **argv) {
     fprintf(stderr, "Usage: %s ["CLI_ARG_PAUSE_ON_SYSCALL_NR" <syscall nr>|"CLI_ARG_PAUSE_ON_SYSCALL_NAME" <syscall name>] <program> [<args> ...]\n", argv[0]);
     exit(1);
 }
 
-int main(int argc, char **argv) {
-/* -- CLI args -- */
+void parse_cli_args(int argc, char** argv,
+                    int* child_args_offset_ptr,
+                    int* pause_on_syscall_nr_ptr) {
     if (argc < 2) {
         usage(argv);
     }
 
-  /* - Check whether tracing shall be paused on specific syscall - */
-    int child_args_offset = 1;       /* executable itself */
-    int pause_on_syscall_nr = -1;
+    *pause_on_syscall_nr_ptr = -1;
 
-    /* Passed using syscall nr */
+
+  /* Passed using syscall nr */
     if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NR)) {
         if (argc < 4) {              /* E.g., ministrace, -s, execve, whoami */
             usage(argv);
@@ -100,20 +100,20 @@ int main(int argc, char **argv) {
         char *pause_on_syscall_nr_str = NULL;
         if (NULL != (pause_on_syscall_nr_str = argv[2])) {
             char *p_end_ptr = NULL;
-            pause_on_syscall_nr = (int)strtol(pause_on_syscall_nr_str, &p_end_ptr, 10);
+            *pause_on_syscall_nr_ptr = (int)strtol(pause_on_syscall_nr_str, &p_end_ptr, 10);
             if (pause_on_syscall_nr_str == p_end_ptr || ERANGE == errno) {
                 fprintf(stderr, "Err: Couldn't parse value \"%s\" as number\n", pause_on_syscall_nr_str);
-                return 1;
+                exit(1);
             }
         }
 
-        if (pause_on_syscall_nr > MAX_SYSCALL_NUM || pause_on_syscall_nr < 0) {
+        if (*pause_on_syscall_nr_ptr > MAX_SYSCALL_NUM || *pause_on_syscall_nr_ptr < 0) {
             fprintf(stderr, "Err: %s is not a valid syscall\n", argv[2]);
             exit(1);
         }
-        child_args_offset += 2;      /* "--pause-snr", "<int>" */
+        *child_args_offset_ptr += 2;      /* "--pause-snr", "<int>" */
 
-    /* Passed using syscall name; WARNING/ISSUE: x32 ABI syscalls have same name as x64 syscalls and appear later in `syscalls` */
+  /* Passed using syscall name; WARNING/ISSUE: x32 ABI syscalls have same name as x64 syscalls and appear later in `syscalls` */
     } else if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NAME)) {
         if (argc < 4) {              /* E.g., ministrace, -n, 59, whoami */
             usage(argv);
@@ -123,22 +123,32 @@ int main(int argc, char **argv) {
         for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
             const syscall_entry* const ent = &syscalls[i];
             if (NULL != ent->name && !strcmp(syscall_name, ent->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
-                pause_on_syscall_nr = i;
+                *pause_on_syscall_nr_ptr = i;
                 break;
             }
         }
 
-        if (-1 == pause_on_syscall_nr) {
+        if (-1 == *pause_on_syscall_nr_ptr) {
             fprintf(stderr, "Err: Syscall w/ name \"%s\" doesn't exist\n", syscall_name);
             exit(1);
         }
-        child_args_offset += 2;      /* E.g., "-n", "<name>" */
+        *child_args_offset_ptr += 2;      /* E.g., "-n", "<name>" */
     }
+}
+
+
+int main(int argc, char **argv) {
+/* -- CLI args -- */
+    int pause_on_syscall_nr;
+    int child_args_offset = 1;       /* executable itself */
+
+    parse_cli_args(argc, argv,
+                   &child_args_offset,
+                   &pause_on_syscall_nr);
 
 
 /* (0.) Fork child (gets args passed) */
     pid_t pid = DIE_WHEN_ERRNO(fork());
-
     return (!pid) ?
          (run_child_tracee(argc - child_args_offset, argv + child_args_offset)) :
          (run_parent_tracer(pid, pause_on_syscall_nr));
@@ -379,7 +389,7 @@ char *read_string(pid_t pid, unsigned long addr) {
         PRINT_ERR("malloc: Failed to allocate memory");
         exit(1);
     }
-    
+
     size_t read_bytes = 0;
     unsigned long ptrace_read_word;
     while (1) {
