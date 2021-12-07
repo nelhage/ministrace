@@ -75,10 +75,10 @@ void fprint_str_esc(FILE* restrict stream, char* str);
 
 
 /* - Cli args - */
-struct cli_args {
+typedef struct cli_args {
     int pause_on_scall_nr;
     int exec_arg_offset;
-};
+} cli_args;
 
 bool arg_was_passed_as_single_arg(char* arg) {
     return !strncmp("-", arg, strlen("-"));         /* A CLI arg+option can be 1 arg when passed as `arg=val` or 2 when `arg val` */
@@ -99,7 +99,7 @@ int str_to_long(char* str, long* val) {
 }
 
 static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
-    struct cli_args *arguments = state->input;
+    cli_args *arguments = state->input;
     switch(key) {
         case 'n':
             {
@@ -150,8 +150,8 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 }
 
 void parse_cli_args(int argc, char** argv,
-                    struct cli_args* parsed_cli_args_ptr) {
-    struct argp_option cli_options[] = {
+                    cli_args* parsed_cli_args_ptr) {
+    const static struct argp_option cli_options[] = {
         {"pause-snr",    'n', "nr",   0, "Pause on specified syscall nr",   1},
         {"pause-sname",  'a', "name", 0, "Pause on specified syscall name", 1},
         {0}
@@ -161,7 +161,7 @@ void parse_cli_args(int argc, char** argv,
     parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
 
-    struct argp argp = {
+    const static struct argp argp = {
         cli_options, parse_cli_opt,
         "program",
         "A minimal toy implementation of strace(1)"
@@ -173,7 +173,7 @@ void parse_cli_args(int argc, char** argv,
 
 int main(int argc, char **argv) {
 /* - Parse CLI args - */
-    struct cli_args parsed_cli_args;
+    cli_args parsed_cli_args;
     parse_cli_args(argc, argv, &parsed_cli_args);
 
     const int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ argv[0] + e.g., "--pause-snr", "<int>" */
