@@ -11,8 +11,10 @@
 #include <stdlib.h>                 /* NULL, exit, strtol, malloc, realloc, free */
 #include <stdio.h>                  /* perror, fprintf, stderr */
 #include <errno.h>                  /* errno, ERANGE */
-#include <string.h>                 /* strcmp, memcpy, memchr */
+#include <string.h>                 /* strcmp, strncmp, memcpy, memchr */
 #include <stdbool.h>                /* bool, true, false */
+
+#include <argp.h>                   /* ARGP_ERR_UNKNOWN, error_t, argp_parse, argp_option, arguments, argp */
 
 #include <ctype.h>                  /* isprint */
 #include <locale.h>                 /* setlocale, LC_ALL */
@@ -22,9 +24,6 @@
 
 
 /* -- Global Macros -- */
-#define CLI_ARG_PAUSE_ON_SYSCALL_NR "--pause-snr"
-#define CLI_ARG_PAUSE_ON_SYSCALL_NAME "--pause-sname"
-
 /*
  * ELUCIDATION:
  *  - `ORIG_RAX` = Value of RAX BEFORE syscall (syscall nr)
@@ -57,8 +56,8 @@ int run_parent_tracer(pid_t pid, int pause_on_syscall_nr);
 int run_child_tracee(int argc, char **argv);
 
 bool wait_for_syscall_or_check_child_exited(pid_t pid);
-long __get_reg_content(pid_t pid, size_t off_user_struct);
 
+long __get_reg_content(pid_t pid, size_t off_user_struct);
 #define offsetof(a, b) __builtin_offsetof(a, b)
 #define get_reg_content(pid, reg_name) __get_reg_content(pid, offsetof(struct user, regs.reg_name))
 
@@ -76,82 +75,113 @@ void fprint_str_esc(FILE* restrict stream, char* str);
 
 
 /* - Cli args - */
-void usage(char **argv) {
-    fprintf(stderr, "Usage: %s ["CLI_ARG_PAUSE_ON_SYSCALL_NR" <syscall nr>|"CLI_ARG_PAUSE_ON_SYSCALL_NAME" <syscall name>] <program> [<args> ...]\n", argv[0]);
-    exit(1);
+struct cli_args {
+    int pause_on_scall_nr;
+    int exec_arg_offset;
+};
+
+bool arg_was_passed_as_single_arg(char* arg) {
+    return !strncmp("-", arg, strlen("-"));         /* A CLI arg+option can be 1 arg when passed as `arg=val` or 2 when `arg val` */
+}
+
+int str_to_long(char* str, long* val) {
+    char *parse_end_ptr = NULL;
+    if (NULL != (parse_end_ptr = str) && NULL != val) {
+        char *p_end_ptr = NULL;
+        const long parsed_number = (int)strtol(parse_end_ptr, &p_end_ptr, 10);
+
+        if (parse_end_ptr != p_end_ptr && ERANGE != errno) {
+            *val = parsed_number;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
+    struct cli_args *arguments = state->input;
+    switch(key) {
+        case 'n':
+            {
+                long parsed_syscall_nr;
+                if (str_to_long(arg, &parsed_syscall_nr) < 0) {
+                    argp_usage(state);
+                }
+
+                if ((parsed_syscall_nr > MAX_SYSCALL_NUM || parsed_syscall_nr < 0) ||
+                    NULL == syscalls[parsed_syscall_nr].name) {
+                    argp_usage(state);
+                }
+                arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
+                arguments->exec_arg_offset += arg_was_passed_as_single_arg(state->argv[state->next -1]) ? (1) : (2);
+            }
+            break;
+
+        case 'a':
+            {
+                for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
+                    const syscall_entry* const ent = &syscalls[i];
+                    if (NULL != ent->name && !strcmp(arg, ent->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
+                        arguments->pause_on_scall_nr = i;
+                        arguments->exec_arg_offset += arg_was_passed_as_single_arg(state->argv[state->next -1]) ? (1) : (2);
+                        return 0;
+                    }
+                }
+                argp_usage(state);
+            }
+            break;
+
+        case ARGP_KEY_ARG:
+            /* Too many arguments */
+          break;
+
+        case ARGP_KEY_END:
+          if (state->arg_num < 1) {
+            /* Not enough arguments */
+            argp_usage (state);
+          }
+          break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+
+    return 0;
 }
 
 void parse_cli_args(int argc, char** argv,
-                    int* child_args_offset_ptr,
-                    int* pause_on_syscall_nr_ptr) {
-    if (argc < 2) {
-        usage(argv);
-    }
+                    struct cli_args* parsed_cli_args_ptr) {
+    struct argp_option cli_options[] = {
+        {"pause-snr",    'n', "nr",   0, "Pause on specified syscall nr",   1},
+        {"pause-sname",  'a', "name", 0, "Pause on specified syscall name", 1},
+        {0}
+    };
 
-    *pause_on_syscall_nr_ptr = -1;
+  /* Defaults */
+    parsed_cli_args_ptr->exec_arg_offset = 0;
+    parsed_cli_args_ptr->pause_on_scall_nr = -1;
 
-
-  /* Passed using syscall nr */
-    if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NR)) {
-        if (argc < 4) {              /* E.g., ministrace, -s, execve, whoami */
-            usage(argv);
-        }
-
-        char *pause_on_syscall_nr_str = NULL;
-        if (NULL != (pause_on_syscall_nr_str = argv[2])) {
-            char *p_end_ptr = NULL;
-            *pause_on_syscall_nr_ptr = (int)strtol(pause_on_syscall_nr_str, &p_end_ptr, 10);
-            if (pause_on_syscall_nr_str == p_end_ptr || ERANGE == errno) {
-                fprintf(stderr, "Err: Couldn't parse value \"%s\" as number\n", pause_on_syscall_nr_str);
-                exit(1);
-            }
-        }
-
-        if (*pause_on_syscall_nr_ptr > MAX_SYSCALL_NUM || *pause_on_syscall_nr_ptr < 0) {
-            fprintf(stderr, "Err: %s is not a valid syscall\n", argv[2]);
-            exit(1);
-        }
-        *child_args_offset_ptr += 2;      /* "--pause-snr", "<int>" */
-
-  /* Passed using syscall name; WARNING/ISSUE: x32 ABI syscalls have same name as x64 syscalls and appear later in `syscalls` */
-    } else if (!strcmp(argv[1], CLI_ARG_PAUSE_ON_SYSCALL_NAME)) {
-        if (argc < 4) {              /* E.g., ministrace, -n, 59, whoami */
-            usage(argv);
-        }
-        const char* const syscall_name = argv[2];
-
-        for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
-            const syscall_entry* const ent = &syscalls[i];
-            if (NULL != ent->name && !strcmp(syscall_name, ent->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
-                *pause_on_syscall_nr_ptr = i;
-                break;
-            }
-        }
-
-        if (-1 == *pause_on_syscall_nr_ptr) {
-            fprintf(stderr, "Err: Syscall w/ name \"%s\" doesn't exist\n", syscall_name);
-            exit(1);
-        }
-        *child_args_offset_ptr += 2;      /* E.g., "-n", "<name>" */
-    }
+    struct argp argp = {
+        cli_options, parse_cli_opt,
+        "program",
+        "A minimal toy implementation of strace(1)"
+    };
+    argp_parse(&argp, argc, argv, 0, 0, parsed_cli_args_ptr);
 }
 
 
+
 int main(int argc, char **argv) {
-/* -- CLI args -- */
-    int pause_on_syscall_nr;
-    int child_args_offset = 1;       /* executable itself */
+/* - Parse CLI args - */
+    struct cli_args parsed_cli_args;
+    parse_cli_args(argc, argv, &parsed_cli_args);
 
-    parse_cli_args(argc, argv,
-                   &child_args_offset,
-                   &pause_on_syscall_nr);
-
-
+    const int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ argv[0] + e.g., "--pause-snr", "<int>" */
 /* (0.) Fork child (gets args passed) */
     pid_t pid = DIE_WHEN_ERRNO(fork());
     return (!pid) ?
          (run_child_tracee(argc - child_args_offset, argv + child_args_offset)) :
-         (run_parent_tracer(pid, pause_on_syscall_nr));
+         (run_parent_tracer(pid, parsed_cli_args.pause_on_scall_nr));
 }
 
 
