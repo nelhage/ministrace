@@ -1,6 +1,6 @@
 /**
  * TODOs:
- *   - ARM SUPPORT ??
+ *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
  */
 #include <sys/ptrace.h>             /* ptrace, PTRACE_TRACEME, PTRACE_SETOPTIONS, PTRACE_O_TRACESYSGOOD, PTRACE_SYSCALL */
 #include <bits/types.h>             /* eax, orig_eax, ebx, ecx, edx, esi, edi, ebp, rax, orig_rax, rdi, rsi, rdx, r10, r8, r9 */
@@ -191,8 +191,12 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    const int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ argv[0] + e.g., "--pause-snr", "<int>" */
+
 /* (0.) Fork child (gets args passed) */
+    int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ argv[0] + e.g., "--pause-snr", "<int>" */
+    if (!strcmp("--", argv[child_args_offset])) {                   /* `--` for stop parsing cli args (otherwise args of to be traced program will be parsed) */
+        child_args_offset++;        // TODO: REVISE ("--" is always 2nd in `argv` ??)
+    }
     pid_t pid = DIE_WHEN_ERRNO(fork());
     return (!pid) ?
          (run_child_tracee(argc - child_args_offset, argv + child_args_offset)) :
@@ -202,7 +206,7 @@ int main(int argc, char **argv) {
 
 
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- ----------------------------------------- */
-/* -- Misc . -- */
+/* -- Misc. -- */
 void print_syscalls(void) {
     for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
         const syscall_entry* const ent = &syscalls[i];
