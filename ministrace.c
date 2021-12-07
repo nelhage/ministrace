@@ -52,6 +52,8 @@
 
 
 /* -- Function prototypes -- */
+void print_syscalls(void);
+
 int run_parent_tracer(pid_t pid, int pause_on_syscall_nr);
 int run_child_tracee(int argc, char **argv);
 
@@ -76,6 +78,7 @@ void fprint_str_esc(FILE* restrict stream, char* str);
 
 /* - Cli args - */
 typedef struct cli_args {
+    bool list_syscalls;
     int pause_on_scall_nr;
     int exec_arg_offset;
 } cli_args;
@@ -84,14 +87,14 @@ bool arg_was_passed_as_single_arg(char* arg) {
     return !strncmp("-", arg, strlen("-"));         /* A CLI arg+option can be 1 arg when passed as `arg=val` or 2 when `arg val` */
 }
 
-int str_to_long(char* str, long* val) {
+int str_to_long(char* str, long* num) {
     char *parse_end_ptr = NULL;
-    if (NULL != (parse_end_ptr = str) && NULL != val) {
+    if (NULL != (parse_end_ptr = str) && NULL != num) {
         char *p_end_ptr = NULL;
         const long parsed_number = (int)strtol(parse_end_ptr, &p_end_ptr, 10);
 
         if (parse_end_ptr != p_end_ptr && ERANGE != errno) {
-            *val = parsed_number;
+            *num = parsed_number;
             return 0;
         }
     }
@@ -101,6 +104,10 @@ int str_to_long(char* str, long* val) {
 static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
     cli_args *arguments = state->input;
     switch(key) {
+        case 'l':
+            arguments->list_syscalls = true;
+            break;
+
         case 'n':
             {
                 long parsed_syscall_nr;
@@ -136,7 +143,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
           break;
 
         case ARGP_KEY_END:
-          if (state->arg_num < 1) {
+          if (state->arg_num < 1 && !arguments->list_syscalls) {
             /* Not enough arguments */
             argp_usage (state);
           }
@@ -152,12 +159,14 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
     const static struct argp_option cli_options[] = {
-        {"pause-snr",    'n', "nr",   0, "Pause on specified syscall nr",   1},
-        {"pause-sname",  'a', "name", 0, "Pause on specified syscall name", 1},
+        {"list-syscalls", 'l', NULL,   0, "List supported syscalls",         0},
+        {"pause-snr",     'n', "nr",   0, "Pause on specified syscall nr",   1},
+        {"pause-sname",   'a', "name", 0, "Pause on specified syscall name", 1},
         {0}
     };
 
   /* Defaults */
+    parsed_cli_args_ptr->list_syscalls = false;
     parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
 
@@ -176,6 +185,12 @@ int main(int argc, char **argv) {
     cli_args parsed_cli_args;
     parse_cli_args(argc, argv, &parsed_cli_args);
 
+
+    if (parsed_cli_args.list_syscalls) {
+        print_syscalls();
+        return 0;
+    }
+
     const int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ argv[0] + e.g., "--pause-snr", "<int>" */
 /* (0.) Fork child (gets args passed) */
     pid_t pid = DIE_WHEN_ERRNO(fork());
@@ -187,6 +202,19 @@ int main(int argc, char **argv) {
 
 
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- ----------------------------------------- */
+/* -- Misc . -- */
+void print_syscalls(void) {
+    for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
+        const syscall_entry* const ent = &syscalls[i];
+        if (NULL != ent->name) {
+            printf("\t%d: %s\n", i, ent->name);
+        }
+    }
+}
+
+
+
+/* -- Tracing -- */
 int run_parent_tracer(pid_t pid, int pause_on_syscall_nr) {
 /* (0) Set ptrace options */
     int child_proc_status;
