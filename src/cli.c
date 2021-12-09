@@ -7,7 +7,7 @@
 
 #include "cli.h"
 #include "syscalls.h"
-#include "syscallents.h"
+#include "generated/syscallents.h"
 
 
 

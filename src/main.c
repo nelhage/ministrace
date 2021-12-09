@@ -43,7 +43,7 @@ void wait_for_user_input(void);
 
 void print_syscall(pid_t pid, int syscall_nr);
 
-
+/*
 typedef enum SYSCALL_STATE { SYSCALL_ENTERED, SYSCALL_EXITED } SYSCALL_STATE;
 typedef struct child_syscall_state {
   SYSCALL_STATE st;
@@ -53,6 +53,7 @@ typedef struct child_syscall_state {
 static void toggle_syscall_state(child_syscall_state_t* st) {
   st.st = (st.st == SYSCALL_ENTERED ? SYSCALL_EXITED : SYSCALL_ENTERED);
 }
+*/
 
 
 /* -- Functions -- */

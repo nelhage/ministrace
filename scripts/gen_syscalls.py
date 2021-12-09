@@ -13,7 +13,7 @@ import subprocess
 
 
 # --- Globals ---
-GENERATED_HEADER_FILENAME = 'syscallents.h'
+GENERATED_HEADER_FILENAME = '__syscallents.h'
 
 GENERATED_HEADER_SYSCALL_STRUCT_NAME = "syscall_entry"
 GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"

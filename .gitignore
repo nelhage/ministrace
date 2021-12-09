@@ -1,6 +1,6 @@
 # -- Project specific --
 # - Generated files -
-syscallents.h
+src/generated
 
 
 # -- IDEs --
