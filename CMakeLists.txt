@@ -38,6 +38,7 @@ add_custom_command(
 
 # Please keep in alphabetical order
 set(SOURCE
+    ${CMAKE_SOURCE_DIR}/__syscallents.c
     ${CMAKE_SOURCE_DIR}/cli.c
     ${CMAKE_SOURCE_DIR}/main.c
     ${CMAKE_SOURCE_DIR}/trace_ptrace.c

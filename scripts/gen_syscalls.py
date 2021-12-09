@@ -13,14 +13,18 @@ import subprocess
 
 
 # --- Globals ---
-GENERATED_HEADER_FILENAME = '__syscallents.h'
+TYPES_HEADER = "syscalls.h"
+
+GENERATED_SRC_FILENAME = '__syscallents'
 
 GENERATED_HEADER_SYSCALL_STRUCT_NAME = "syscall_entry"
 GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"
+
 class GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
     INT = "ARG_INT"
     PTR = "ARG_PTR"
     STR = "ARG_STR"
+
 GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE = 6
 
 
@@ -123,63 +127,70 @@ def parse_found_syscall_code_fragment(syscall_code_fragment: str) -> tuple:
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
-def generate_syscalls_header(syscall_header_file: str,
-            syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
-    out = open(syscall_header_file, 'w')
-
-
-  # - Header of header file -
-    header_guard_text = syscall_header_file.replace("-", "_").replace(".", "_").upper()
-    print("/*\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */", file=out)
-    print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out)
-    print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out)
-    print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}", file=out)
-    print("#define SYSCALLS_ARR_SIZE (sizeof(syscalls) / sizeof(*syscalls))\n\n", file=out)
+def generate_syscalls_header(target_dir: str, src_filename: str,
+                             syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
 
-  # - Macro constants for indexing syscall array -
-    print("/* -- Array index consts (see also header file `/usr/include/x86_64-linux-gnu/asm/unistd_64.h`) -- */", file=out)
-    for num in sorted(syscalls_parsed_from_tbl.keys()):
-        syscall_name = syscalls_parsed_from_tbl[num].name
-        syscall_abi = syscalls_parsed_from_tbl[num].abi
-        print(f"#define {generate_syscall_macro_name(syscall_name, syscall_abi)} {num}", file=out)
+    with open(os.path.join(target_dir, src_filename + ".h"), 'w') as out_header:
+        # - Header of header file -
+        header_guard_text = src_filename.replace("-", "_").replace(".", "_").upper()
+        print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out_header)
 
-    print("\n\n", file=out)
+        print(f"#include \"{TYPES_HEADER}\"\n", file=out_header)
 
-  # - Array containing all syscalls -
-    print("/* -- Parsed syscalls as array -- */", file=out)
-    print("const struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out)
-    syscalls_with_no_parsed_args = False
-    for num in sorted(syscalls_parsed_from_tbl.keys()):
-        syscall_name = syscalls_parsed_from_tbl[num].name
-        syscall_abi = syscalls_parsed_from_tbl[num].abi
+        print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}", file=out_header)
+        print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out_header)
+        print("#define SYSCALLS_ARR_SIZE (MAX_SYSCALL_NUM + 1)\n\n", file=out_header)
 
-        if syscall_name in syscalls_parsed_from_scr:
-            syscall_code_fragment = syscalls_parsed_from_scr[syscall_name].found_code_fragment
-            parsed_syscall_args = syscalls_parsed_from_scr[syscall_name].parsed_args
-            print(f"/* {syscall_code_fragment} */", file=out)
-        else:
-            parsed_syscall_args = ["void*"] * GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE
-            syscalls_with_no_parsed_args = True
-            print("/* WARNING: Found no args for syscall \"%s\", using default (all pointers) */" % (syscall_name,), file=out)
+        # - Macro constants for indexing syscall array -
+        print("/* -- Array index consts (see also header file `/usr/include/x86_64-linux-gnu/asm/unistd_64.h`) -- */", file=out_header)
+        for num in sorted(syscalls_parsed_from_tbl.keys()):
+            syscall_name = syscalls_parsed_from_tbl[num].name
+            syscall_abi = syscalls_parsed_from_tbl[num].abi
+            print(f"#define {generate_syscall_macro_name(syscall_name, syscall_abi)} {num}", file=out_header)
 
-        print("  [%s] = {" % (generate_syscall_macro_name(syscall_name, syscall_abi),), file=out)
-        print("    .name  = \"%s\"," % (syscall_name,), file=out)
-        print("    .nargs = %d," % (len(parsed_syscall_args,)), file=out)
-        out.write(   "    .args  = {")
-        out.write(", ".join([parse_syscall_arg_type(t) for t in parsed_syscall_args] + ["-1"] * (6 - len(parsed_syscall_args))))  # `-1` means N/A
-        out.write("}},\n");
-    print("};", file=out)
+        print("\n", file=out_header)
 
-  # - End of header file (guard) -
-    print(f"\n#endif /* {header_guard_text} */", file=out)
+        print("extern const struct %s %s[];" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out_header)
 
+        print("\n", file=out_header)
 
-    out.close()
+        # - End of header file (guard) -
+        print(f"#endif /* {header_guard_text} */", file=out_header)
 
-    if syscalls_with_no_parsed_args:
-        print("WARNING: Some syscalls have missing args", file=sys.stderr)
+    with open(os.path.join(target_dir, src_filename + ".c"), 'w') as out_cfile:
+        # - Array containing all syscalls -
+        print(f"#include \"{src_filename}.h\"", file=out_cfile)
+
+        print("\n", file=out_cfile)
+
+        print("const struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out_cfile)
+        syscalls_with_no_parsed_args = False
+        for num in sorted(syscalls_parsed_from_tbl.keys()):
+            syscall_name = syscalls_parsed_from_tbl[num].name
+            syscall_abi = syscalls_parsed_from_tbl[num].abi
+
+            if syscall_name in syscalls_parsed_from_scr:
+                syscall_code_fragment = syscalls_parsed_from_scr[syscall_name].found_code_fragment
+                parsed_syscall_args = syscalls_parsed_from_scr[syscall_name].parsed_args
+                print(f"/* {syscall_code_fragment} */", file=out_cfile)
+            else:
+                parsed_syscall_args = ["void*"] * GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE
+                syscalls_with_no_parsed_args = True
+                print("/* WARNING: Found no args for syscall \"%s\", using default (all pointers) */" % (syscall_name,), file=out_cfile)
+
+            print("  [%s] = {" % (generate_syscall_macro_name(syscall_name, syscall_abi),), file=out_cfile)
+            print("    .name  = \"%s\"," % (syscall_name,), file=out_cfile)
+            print("    .nargs = %d," % (len(parsed_syscall_args,)), file=out_cfile)
+            out_cfile.write(   "    .args  = {")
+            out_cfile.write(", ".join([parse_syscall_arg_type(t) for t in parsed_syscall_args] + ["-1"] * (6 - len(parsed_syscall_args))))  # `-1` means N/A
+            out_cfile.write("}},\n")
+        print("};", file=out_cfile)
+
+        if syscalls_with_no_parsed_args:
+            print("WARNING: Some syscalls have missing args", file=sys.stderr)
+
 
 def parse_syscall_arg_type(arg_str: str) -> GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
     if re.search(r'^(const\s*)?char\s*(__user\s*)?\*\s*$', arg_str):
@@ -207,7 +218,7 @@ def main(args):
 
     target_dir = args[1] if len(args) == 2 else "."
     generate_syscalls_header(
-            os.path.join(target_dir, GENERATED_HEADER_FILENAME),
+            target_dir, GENERATED_SRC_FILENAME,
             syscalls_parsed_from_tbl, syscalls_parsed_from_scr)
 
 

@@ -6,8 +6,7 @@
 #include <errno.h>
 
 #include "cli.h"
-#include "syscalls.h"
-#include "generated/syscallents.h"
+#include "__syscallents.h"
 
 
 

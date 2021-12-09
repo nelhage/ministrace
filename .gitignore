@@ -1,6 +1,7 @@
 # -- Project specific --
 # - Generated files -
-src/generated
+__*.h
+__*.c
 
 
 # -- IDEs --
