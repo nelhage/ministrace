@@ -13,7 +13,7 @@ import subprocess
 
 
 # --- Globals ---
-GENERATED_HEADER_FILE = 'syscallents.h'
+GENERATED_HEADER_FILENAME = 'syscallents.h'
 
 GENERATED_HEADER_SYSCALL_STRUCT_NAME = "syscall_entry"
 GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"
@@ -123,7 +123,7 @@ def parse_found_syscall_code_fragment(syscall_code_fragment: str) -> tuple:
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
-def generate_syscalls_header(syscall_header_file: str, sys_info: dict,
+def generate_syscalls_header(syscall_header_file: str,
             syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
     out = open(syscall_header_file, 'w')
 
@@ -132,7 +132,6 @@ def generate_syscalls_header(syscall_header_file: str, sys_info: dict,
     header_guard_text = syscall_header_file.replace("-", "_").replace(".", "_").upper()
     print("/*\n * Generated file (don't check in VCS) containing all syscalls\n * MUST MATCH KERNEL VERSION OF SYSTEM IT'S RUNNING ON \n */", file=out)
     print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out)
-    # print(f"#define SYSCALLS_CPU_ARCH \"{sys_info['arch']}\"\n#define SYSCALLS_KERNEL_VERSION \"{sys_info['kernel']}\"", file=out)
     print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out)
     print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}", file=out)
     print("#define SYSCALLS_ARR_SIZE (sizeof(syscalls) / sizeof(*syscalls))\n\n", file=out)
@@ -193,8 +192,8 @@ def parse_syscall_arg_type(arg_str: str) -> GENERATED_HEADER_STRUCT_ARG_TYPE_ENU
 
 
 def main(args):
-    if not args or len(args) > 1:
-        print("Usage: %s /path/to/linux_src_dir" % (sys.argv[0],), file=sys.stderr)
+    if not args:
+        print("Usage: %s /path/to/linux_src_dir [target-dir]" % (sys.argv[0],), file=sys.stderr)
         return 1
 
     _, _, kernel_version, _, cpu_arch = os.uname()
@@ -206,8 +205,9 @@ def main(args):
     syscalls_parsed_from_tbl = parse_syscalls_name_and_nr_from_tbl(os.path.join(linux_src_dir, tbl_file_basedir, tbl_file))
     syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir)
 
-    generate_syscalls_header(GENERATED_HEADER_FILE,
-            { "arch": cpu_arch, "kernel": kernel_version },
+    target_dir = args[1] if len(args) == 2 else "."
+    generate_syscalls_header(
+            os.path.join(target_dir, GENERATED_HEADER_FILENAME),
             syscalls_parsed_from_tbl, syscalls_parsed_from_scr)
 
 
