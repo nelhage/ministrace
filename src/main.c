@@ -3,17 +3,17 @@
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
  */
 #include "trace_ptrace.h"
-#include <sys/wait.h>               /* waitpid, __WALL, WIFSTOPPED, WSTOPSIG, WIFEXITED */
-#include <signal.h>                 /* kill, SIGSTOP, SIGTRAP, siginfo_t */
+#include <sys/wait.h>
+#include <signal.h>
 
-#include <unistd.h>                 /* size_t, fork, pid_t, execvp, getpid */
-#include <stdlib.h>                 /* NULL, exit, strtol, malloc, realloc, free */
-#include <stdio.h>                  /* perror, fprintf, stderr */
-#include <errno.h>                  /* errno */
-#include <string.h>                 /* strcmp, memcpy, memchr, strerror */
-#include <stdbool.h>                /* bool, true, false */
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <stdbool.h>
 
-#include "trace_syscalls.h"               /* ARG_INT, ARG_PTR, ARG_STR, syscall_entry */
+#include "trace_syscalls.h"
 
 #include "cli.h"
 
@@ -21,17 +21,7 @@
 
 
 
-
-
-
-
-
 /* -- Function prototypes -- */
-
-
-
-
-
 void print_syscalls(void);
 
 int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork);
