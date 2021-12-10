@@ -1,4 +1,4 @@
-#ifndef ERRRO_H
+#ifndef ERROR_H
 #define ERROR_H
 
 #include <stdio.h>

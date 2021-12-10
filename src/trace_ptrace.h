@@ -1,5 +1,5 @@
 #ifndef TRACE_PTRACE_H
-#define TRACE_PTHRACE_H
+#define TRACE_PTRACE_H
 
 #include <sys/ptrace.h>
 #include <bits/types.h>
