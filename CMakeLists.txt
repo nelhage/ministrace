@@ -8,7 +8,9 @@ enable_language(C)
 
 
 # -- Options --
-option (WITH_TESTS "Build tests" ON)
+option(WITH_TESTS "Build tests" ON)
+
+set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
 
 
 # -- Preprocessor / Compile options --

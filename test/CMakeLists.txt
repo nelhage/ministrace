@@ -3,5 +3,7 @@ set(CMAKE_BUILD_TYPE Debug)
 
 
 # -- Ultimate test program --
-add_executable(ultimate_test_program ultimate_test_program.c)
-target_link_libraries(ultimate_test_program "-lpthread")
+if (WITH_TESTS)
+    add_executable(ultimate_test_program ultimate_test_program.c)
+    target_link_libraries(ultimate_test_program "-lpthread")
+endif()
