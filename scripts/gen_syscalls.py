@@ -13,11 +13,11 @@ import subprocess
 
 
 # --- Globals ---
-TYPES_HEADER = "syscalls.h"
+TYPES_HEADER = "syscall_types.h"
 
-GENERATED_SRC_FILENAME = '__syscallents'
+GENERATED_SRC_FILENAME = '__syscalls'
 
-GENERATED_HEADER_SYSCALL_STRUCT_NAME = "syscall_entry"
+GENERATED_HEADER_SYSCALL_STRUCT_NAME = "sys_call"
 GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"
 
 class GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
@@ -131,11 +131,14 @@ def generate_syscalls_header(target_dir: str, src_filename: str,
                              syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
+    GENERATED_FILE_NOTE = "/*\n * Generated file. Do not edit manually or check into VCS.\n *\n */"
 
     with open(os.path.join(target_dir, src_filename + ".h"), 'w') as out_header:
         # - Header of header file -
-        header_guard_text = src_filename.replace("-", "_").replace(".", "_").upper()
-        print("#ifndef {0}\n#define {0}\n".format(header_guard_text), file=out_header)
+        header_guard_name = f"{src_filename}.h".replace("-", "_").replace(".", "_").upper()
+
+        print(GENERATED_FILE_NOTE, file=out_header)
+        print("#ifndef {0}\n#define {0}\n".format(header_guard_name), file=out_header)
 
         print(f"#include \"{TYPES_HEADER}\"\n", file=out_header)
 
@@ -152,20 +155,22 @@ def generate_syscalls_header(target_dir: str, src_filename: str,
 
         print("\n", file=out_header)
 
-        print("extern const struct %s %s[];" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out_header)
+        print(f"extern const {GENERATED_HEADER_SYSCALL_STRUCT_NAME} {GENERATED_HEADER_SYSCALL_ARRAY_NAME}[];", file=out_header)
 
         print("\n", file=out_header)
 
         # - End of header file (guard) -
-        print(f"#endif /* {header_guard_text} */", file=out_header)
+        print(f"#endif /* {header_guard_name} */", file=out_header)
 
     with open(os.path.join(target_dir, src_filename + ".c"), 'w') as out_cfile:
+        print(GENERATED_FILE_NOTE, file=out_cfile)
+
         # - Array containing all syscalls -
         print(f"#include \"{src_filename}.h\"", file=out_cfile)
 
         print("\n", file=out_cfile)
 
-        print("const struct %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out_cfile)
+        print("const %s %s[] = {" % (GENERATED_HEADER_SYSCALL_STRUCT_NAME, GENERATED_HEADER_SYSCALL_ARRAY_NAME), file=out_cfile)
         syscalls_with_no_parsed_args = False
         for num in sorted(syscalls_parsed_from_tbl.keys()):
             syscall_name = syscalls_parsed_from_tbl[num].name

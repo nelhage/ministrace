@@ -16,10 +16,17 @@ add_custom_command(
 # - Build -
 # Please keep in alphabetical order
 set(SOURCE
-    __syscallents.c
+    # map/impl/hash_functions/hash_city.c
+    # map/impl/atomic_hash.c
+    # map/impl/tmap.c
+
+    __syscalls.c
     cli.c
     main.c
     trace_ptrace.c
     trace_syscalls.c
 )
 add_executable(ministrace ${SOURCE})
+
+target_link_libraries(ministrace PRIVATE m pthread)                  # Required for hashmap
+target_compile_options(ministrace PRIVATE -march=native -msse4.2)    # Required for hashmap ('hash_city.c')

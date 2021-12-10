@@ -8,5 +8,4 @@
 const char *get_syscall_name(long syscall_nr);
 void print_syscall_args(pid_t pid, long syscall_nr);
 
-
 #endif /* TRACE_SYSCALLS_H */
