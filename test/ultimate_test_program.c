@@ -154,7 +154,7 @@ typedef struct routine_arg {
 void* routine(void* arg) {
     const char* const pname = ((routine_arg*)arg)->pname;
     const bool loop = ((routine_arg*)arg)->loop;
-    const void(*sig_handler_func_ptr)(int) = ((routine_arg*)arg)->sig_handler_func_ptr;
+    void(*sig_handler_func_ptr)(int) = ((routine_arg*)arg)->sig_handler_func_ptr;
 
     register_sig_handlers(sig_handler_func_ptr);
 
@@ -207,11 +207,11 @@ int main(int argc, char** argv) {
 
     cli_args args;
     if (-1 == parse_cli_args(argc, argv, &args)) {
-        fprintf(stderr, "Err: Invalid CLI args\n");
+        fprintf(stderr, "Usage: %s [--loop] [--fork|--pthread]\n", argv[0]);
         return(1);
     }
 
-    // Disable buffering
+    // Disable IO buffering for stdout
     setvbuf(stdout, NULL, _IONBF, 0);
 
 
@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
 
     } else {
         puts("Running single threaded ...");
-        routine((routine_arg[]){{ .loop=args.loop, .sig_handler_func_ptr = &parent_signal_handler }});
+        routine((routine_arg[]){{ .pname = "Thread-1", .loop=args.loop, .sig_handler_func_ptr = &parent_signal_handler }});
     }
 
     return 0;
