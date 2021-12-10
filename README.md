@@ -1,6 +1,6 @@
-# ministrace
+# ministrace v2
 
-## About
+## 1. About
 ministrace is a small strace implementation by Nelson Elhage
 (@nelhage).
 
@@ -15,16 +15,19 @@ detail how it works.
 [1]: http://blog.nelhage.com/2010/08/write-yourself-an-strace-in-70-lines-of-code/
 
 
-## Compile
-0. Install Linux kernel sources (prerequisite)
+## 2. Compile
+* Prerequisites:
+  * Installed Linux kernel sources
     * Steps for Ubuntu:
       * Add apt-sources: Software & Updates &rarr; Ubuntu Software &rarr; Tick checkbox "Source Code"
-      * Install sources: `apt-get source linux`
-1. Change in `Makefile` the variable `LINUX_SRC` to the path of your kernel source (e.g., `/usr/src/linux-5.4.0`)
-2. Run `make` in project's root dir
+      * Install sources: `sudo apt-get source linux`
+* Out-of-source build:
+  1. `mkdir build && cd build`
+  2. `ccmake ..` &rarr; press `c` &rarr; Set `LINUX_SRC_DIR` &rarr; press `g`
+  3. `cmake --build .`
+      * Executable will be in `build/src`
 
-
-## Usage
+## 3. Usage
 ```ministrace [--pause-snr <syscall nr>|--pause-sname <syscall name>] <program> [<args> ...]```
 
 Basic ministrace usage just takes a command line:
