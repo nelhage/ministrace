@@ -16,7 +16,7 @@ void _fprint_str_esc(FILE* restrict stream, char* str);
 
 
 /* -- Functions -- */
-const char *get_syscall_name(int syscall_nr) {
+const char *get_syscall_name(long syscall_nr) {
     if (syscall_nr <= MAX_SYSCALL_NUM) {
         const syscall_entry* const ent = &syscalls[syscall_nr];
         if (ent->name) {
@@ -25,12 +25,12 @@ const char *get_syscall_name(int syscall_nr) {
     }
 
     static char fallback_generic_syscall_name[128];
-    snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%d", syscall_nr);
+    snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
     return fallback_generic_syscall_name;
 }
 
 
-void print_syscall_args(pid_t pid, int syscall_nr) {
+void print_syscall_args(pid_t pid, long syscall_nr) {
     const syscall_entry* ent = NULL;
     int nargs = SYSCALL_MAX_ARGS;
 

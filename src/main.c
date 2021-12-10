@@ -29,7 +29,7 @@ bool wait_for_syscall_or_exit(pid_t pid);
 
 void wait_for_user_input(void);
 
-void print_syscall(pid_t pid, int syscall_nr);
+void print_syscall(pid_t pid, long syscall_nr);
 
 /*
 typedef enum SYSCALL_STATE { SYSCALL_ENTERED, SYSCALL_EXITED } SYSCALL_STATE;
@@ -257,7 +257,7 @@ bool wait_for_syscall_or_exit(pid_t pid) {
 }
 
 
-void print_syscall(pid_t pid, int syscall_nr) {
+void print_syscall(pid_t pid, long syscall_nr) {
     fprintf(stderr, "%s(", get_syscall_name(syscall_nr));
     print_syscall_args(pid, syscall_nr);
     fprintf(stderr, ") = ");
