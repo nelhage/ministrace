@@ -95,7 +95,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
 
-    const static struct argp_option cli_options[] = {
+    static const struct argp_option cli_options[] = {
         {"list-syscalls", 'l', NULL,   0, "List supported syscalls",         0},
         {"follow-fork",   'f', NULL,   0, "Follow `fork`ed child processes", 1},
         {"pause-snr",     'n', "nr",   0, "Pause on specified syscall nr",   2},
@@ -109,7 +109,7 @@ void parse_cli_args(int argc, char** argv,
     parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
 
-    const static struct argp argp = {
+    static const struct argp argp = {
         cli_options, parse_cli_opt,
         "program",
         "A minimal toy implementation of strace(1)"

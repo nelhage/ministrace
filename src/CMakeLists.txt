@@ -1,22 +1,17 @@
 
 # - Generate syscalls -
+set(GEN_SYSCALLS_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/gen_syscalls.py")
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0")
 
-find_package(PythonInterp 3.2 REQUIRED)
-
-set(gen_dir "src/generated")
-
+find_package(PythonInterp 3.4 REQUIRED)
 add_custom_command(
-        OUTPUT "${gen_dir}/syscallents.h"
-        COMMAND
-        "${PYTHON_EXECUTABLE}"
-        "${CMAKE_CURRENT_LIST_DIR}/scripts/gen_syscalls.py"
-        --dir "${gen_dir}"
-        --smart
-        --check-changes
-        DEPENDS "${CMAKE_CURRENT_LIST_DIR}/gen_syscalls.py"
-        COMMENT "Parse syscalls from kernel source and generate header file"
+    COMMENT "Parse syscalls from kernel source and generate source files"
+    DEPENDS ${GEN_SYSCALLS_SCRIPT}
+    OUTPUT "${CMAKE_CURRENT_LIST_DIR}/__syscallents.h" "${CMAKE_CURRENT_LIST_DIR}/__syscallents.c"
+    COMMAND "${PYTHON_EXECUTABLE}"
+    ARGS ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR}  ${CMAKE_CURRENT_LIST_DIR}
 )
+
 
 
 # - Build -

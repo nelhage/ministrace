@@ -5,6 +5,7 @@
 #include "trace_ptrace.h"
 #include <sys/wait.h>
 #include <signal.h>
+#include "trace_syscalls.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -13,10 +14,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "trace_syscalls.h"
-
 #include "cli.h"
-
 #include "error.h"
 
 
