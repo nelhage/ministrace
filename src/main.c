@@ -17,7 +17,11 @@
 #include "cli.h"
 #include "error.h"
 
-#include "trace_tmap.h"
+// #include "trace_tmap.h"
+
+/* -- Global consts -- */
+// #define DEFAULT_TMAP_MAX_SIZE 100
+
 
 /* -- Function prototypes -- */
 void print_syscalls(void);
@@ -80,7 +84,9 @@ int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork) {
 
 /* (0) Set ptrace options */
     int status;
-    DIE_WHEN_ERRNO(waitpid(pid, &status, 0));
+    do {
+        DIE_WHEN_ERRNO(waitpid(pid, &status, 0));
+    } while(!WIFSTOPPED(status));
 
     /*
      * ELUCIDATION:
@@ -101,6 +107,8 @@ int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork) {
     if (follow_fork) {
 		ptrace_setoptions |= PTRACE_O_TRACECLONE
 				          | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
+
+        // tmap_create(DEFAULT_TMAP_MAX_SIZE);          // TODO: CLI arg
     }
     ptrace(PTRACE_SETOPTIONS, pid, 0, ptrace_setoptions);
 
@@ -142,10 +150,8 @@ void print_syscall(pid_t pid, long syscall_nr) {
 }
 
 void wait_for_user_input(void) {
-    do {
-        char buf[2];
-        fgets(buf, sizeof(buf), stdin); // wait until user presses enter to continue
-    } while (0);
+    int c;
+    while ( '\n' != (c = getchar()) && EOF != c ) {} // wait until user presses enter to continue
 }
 
 bool wait_for_syscall_or_exit(pid_t pid) {

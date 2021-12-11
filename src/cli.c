@@ -10,11 +10,11 @@
 
 
 /* -- Functions -- */
-bool _arg_was_passed_as_single_arg(char* arg) {
+bool __arg_was_passed_as_single_arg(char* arg) {
     return !strncmp("-", arg, strlen("-"));   /* CLI arg+option can be 1 arg when passed as `arg=val` or 2 when `arg val` */
 }
 
-int _str_to_long(char* str, long* num) {
+int __str_to_long(char* str, long* num) {
     char *parse_end_ptr = NULL;
     if (NULL != (parse_end_ptr = str) && NULL != num) {
         char *p_end_ptr = NULL;
@@ -45,7 +45,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'n':
             {
                 long parsed_syscall_nr;
-                if (_str_to_long(arg, &parsed_syscall_nr) < 0) {
+                if (__str_to_long(arg, &parsed_syscall_nr) < 0) {
                     argp_usage(state);
                 }
 
@@ -54,7 +54,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                     argp_usage(state);
                 }
                 arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
-                arguments->exec_arg_offset += _arg_was_passed_as_single_arg(state->argv[state->next -1]) ? (1) : (2);
+                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
             }
             break;
 
@@ -64,7 +64,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                     const sys_call* const scall = &syscalls[i];
                     if (NULL != scall->name && !strcmp(arg, scall->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
                         arguments->pause_on_scall_nr = i;
-                        arguments->exec_arg_offset += _arg_was_passed_as_single_arg(state->argv[state->next -1]) ? (1) : (2);
+                        arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
                         return 0;
                     }
                 }
