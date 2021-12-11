@@ -68,14 +68,18 @@ int do_tracee(int argc, char **argv) {
     child_exec_argv[argc] = NULL;
     const char* child_exec = child_exec_argv[0];
 
-/* `PTRACE_TRACEME` starts tracing + causes next signal (sent to this process) to stop it & notify the parent (via `wait`), so that the parent knows to start tracing */
+/* ELUCIDATION:
+ *   - `PTRACE_TRACEME`: Starts tracing + causes next signal (sent to this
+ *                       process) to stop it & notify the parent(via `wait`),
+ *                       so that the parent knows to start tracing
+ */
     ptrace(PTRACE_TRACEME);
 /* Stop oneself so parent can set tracing option + Parent will see exec syscall */
     kill(getpid(), SIGSTOP);
 /* Execute actual program */
     return execvp(child_exec, child_exec_argv);
 
-/* Error handling (in case exec failed) */
+/* Error handling (in case `execvp` failed) */
     LOG_ERROR_AND_EXIT("Couldn't exec \"%s\"", child_exec);
 }
 
@@ -99,10 +103,14 @@ int do_tracer(const pid_t pid, const int pause_on_syscall_nr, const bool follow_
 
     /*
      * ELUCIDATION:
-     *  - `PTRACE_O_TRACESYSGOOD`: When delivering syscall traps, set bit 7 in the signal number (i.e., deliver SIGTRAP|0x80) (see `PTRACE_TRAP_INDICATOR_BIT`)
-     *    -> Makes it easier (for tracer) to distinguish b/w normal- & from syscalls caused traps
-     *  - `PTRACE_O_TRACECLONE`: Stop the tracee at next `clone(2)` and automatically starts tracing the newly cloned process, which will start w/ a SIGSTOP; `waitpid(2)` by the tracer will
-     *                           return a status value such that status>>8 == (SIGTRAP | (PTRACE_EVENT_CLONE<<8))
+     *   - `PTRACE_O_TRACESYSGOOD`: Sets bit 7 in the signal number when delivering syscall traps
+     *                              (i.e., deliver SIGTRAP|0x80) (see `PTRACE_TRAP_INDICATOR_BIT`)
+     *                              Makes it easier (for tracer) to distinguish b/w normal- & from syscalls caused traps
+     * 
+     *   - `PTRACE_O_TRACECLONE`:   Stop the tracee at next `clone(2)` and automatically start tracing
+     *                              the newly cloned process, which will start w/ a SIGSTOP;
+     *                              `waitpid(2)` by the tracer will return a status value such that
+     *                              `status>>8 == (SIGTRAP | (PTRACE_EVENT_CLONE<<8))`
      */
     unsigned int ptrace_setoptions = PTRACE_O_TRACESYSGOOD;
     if (follow_fork) {
