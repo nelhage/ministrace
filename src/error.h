@@ -11,7 +11,7 @@
 #if !defined(NDEBUG)
 #  define LOG_DEBUG(format, ...) \
 	do { \
-		fprintf(stdout, "[DEBUG] In function %s (file %s, line %d): " format ".\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__); \
+		fprintf(stdout, "[DEBUG] `%s` (%s:%d): " format ".\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__); \
 	} while(0)
 #else
 #  define LOG_DEBUG(format, ...)
@@ -19,12 +19,12 @@
 
 #define LOG_WARN(format, ...) \
 	do { \
-		fprintf(stderr, "[WARN] In function %s (file %s, line %d): " format ".\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__); \
+		fprintf(stderr, "[WARN] `%s` (%s:%d): " format ".\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__); \
 	} while(0)
 
 #define LOG_ERROR_AND_EXIT(format, ...) \
 	do { \
-		fprintf(stderr, "[ERROR] In function %s (file %s, line %d): " format ".\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__); \
+		fprintf(stderr, "[ERROR] `%s` (%s:%d): " format ".\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__); \
 		exit(EXIT_FAILURE); \
 	} while(0)
 
