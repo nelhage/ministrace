@@ -15,8 +15,7 @@ long __get_reg_content(pid_t pid, size_t off_user_struct) {
      */
     long reg_val = ptrace(PTRACE_PEEKUSER, pid, off_user_struct);
     if (errno) {
-        PRINT_ERR(strerror(errno));
-        exit(1);
+        LOG_ERROR_AND_EXIT("%s", strerror(errno));
     }
     return reg_val;
 }
@@ -54,8 +53,7 @@ char *read_string(pid_t pid, unsigned long addr) {
     size_t read_str_size_bytes = 2048;
 /* Allocate memory as buffer for string to be read */
     if (!(read_str = malloc(read_str_size_bytes))) {
-        PRINT_ERR("malloc: Failed to allocate memory");
-        exit(1);
+        LOG_ERROR_AND_EXIT("`malloc`: Failed to allocate memory");
     }
 
     size_t read_bytes = 0;
@@ -65,8 +63,7 @@ char *read_string(pid_t pid, unsigned long addr) {
         if (read_bytes + sizeof(ptrace_read_word) > read_str_size_bytes) {
             read_str_size_bytes *= 2;
             if (!(read_str = realloc(read_str, read_str_size_bytes))) {
-                PRINT_ERR("realloc: Failed to allocate memory");
-                exit(1);
+                LOG_ERROR_AND_EXIT("`realloc`: Failed to allocate memory");
             }
         }
     /* Read from tracee (each time one word) */

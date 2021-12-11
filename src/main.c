@@ -83,8 +83,7 @@ int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork) {
      *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
      */
     if (!WIFSTOPPED(status)) {
-        PRINT_ERR("Couldn't stop child process");
-        exit(1);
+        LOG_ERROR_AND_EXIT("Couldn't stop child process");
     }
 
     /*
