@@ -65,5 +65,9 @@ int main (void) {
     assert_not_exists_in_map(tid);
 
 
+/* Test 4: Destroy map (Cleanup) */
+    tmap_destroy();
+
+
     return 0;
 }

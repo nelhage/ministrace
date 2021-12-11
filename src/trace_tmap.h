@@ -26,9 +26,9 @@ typedef struct child_syscall_state {
 void tmap_create(size_t max_size);
 void tmap_destroy(void);
 
-int tmap_get(pid_t *key, child_syscall_state** found_sstate);
-void tmap_add_or_update(pid_t *key, child_syscall_state* sstate);
-void tmap_remove(pid_t *key);
+int tmap_get(pid_t *tid, child_syscall_state** found_sstate);
+void tmap_add_or_update(pid_t *tid, child_syscall_state* sstate);
+void tmap_remove(pid_t *tid);
 // void tmap_clear(void);
 
 #endif /* TMAP_H */
