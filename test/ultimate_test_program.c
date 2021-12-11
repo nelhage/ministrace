@@ -1,22 +1,24 @@
-// gcc ultimate_test_program.c -o ultimate_test_program -lpthread
-
+/**
+ * Small test program which allows creating processes (using `fork`) or threads (using pthread lib)
+ * which in turn print info about themselves (tid, pid, ppid, etc.)
+ */
 #define _GNU_SOURCE         /* Necessary for gettid */
-#include <stdio.h>          /* fprintf, printf, setvbuf, stdout, _IONBF */
-#include <unistd.h>         /* write, getpid, getppid, gettid, getpgid, getsid, _exit */
+#include <unistd.h>
+#include <stdio.h>
 
-#include <stdlib.h>         /* exit */
+#include <stdlib.h>
 
-#include <pthread.h>        /* pthread_t, pthread_create, pthread_join */
-#include <sys/wait.h>       /* wait */
+#include <pthread.h>
+#include <sys/wait.h>
 
-#include <string.h>         /* strcmp */
+#include <string.h>
 
-#include <errno.h>          /* errno */
-#include <signal.h>         /* sigaction, sigemptyset, SA_RESTART, SIGSTOP, SIGCONT, SIGINT, SIGUSR1, SIGUSR2, SIGCHLD, SIGHUP */
+#include <errno.h>
+#include <signal.h>
 
-#include <time.h>           /* nanosleep, timespec */
+#include <time.h>
 
-#include <stdbool.h>        /* bool */
+#include <stdbool.h>
 
 
 /* -- Signal handlers -- */
@@ -168,6 +170,10 @@ loop:
 }
 
 
+void usage(char** argv) {
+    fprintf(stderr, "Usage: %s [--loop] [--fork|--pthread]\n", argv[0]);
+}
+
 typedef struct cli_args {
     bool loop;
     bool fork;
@@ -181,6 +187,11 @@ int parse_cli_args(int argc, char** argv, cli_args* args) {
     args->pthread = false;
 
     for (int i=1; i<argc; i++) {
+        if (!strcmp("--help", argv[i])) {
+            usage(argv);
+            exit(0);
+        }
+
         if (!strcmp("--loop", argv[i])) {
             args->loop = true;
             continue;
@@ -207,7 +218,7 @@ int main(int argc, char** argv) {
 
     cli_args args;
     if (-1 == parse_cli_args(argc, argv, &args)) {
-        fprintf(stderr, "Usage: %s [--loop] [--fork|--pthread]\n", argv[0]);
+        usage(argv);
         return(1);
     }
 

@@ -131,13 +131,13 @@ def generate_syscalls_header(target_dir: str, src_filename: str,
                              syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
-    GENERATED_FILE_NOTE = "/*\n * Generated file. Do not edit manually or check into VCS.\n *\n */"
+    GENERATED_FILE_DISCLAIMER = "/*\n * Generated file. Do not edit manually or check into VCS.\n *\n */"
 
     with open(os.path.join(target_dir, src_filename + ".h"), 'w') as out_header:
         # - Header of header file -
         header_guard_name = f"{src_filename}.h".replace("-", "_").replace(".", "_").upper()
 
-        print(GENERATED_FILE_NOTE, file=out_header)
+        print(GENERATED_FILE_DISCLAIMER, file=out_header)
         print("#ifndef {0}\n#define {0}\n".format(header_guard_name), file=out_header)
 
         print(f"#include \"{TYPES_HEADER}\"\n", file=out_header)
@@ -163,7 +163,7 @@ def generate_syscalls_header(target_dir: str, src_filename: str,
         print(f"#endif /* {header_guard_name} */", file=out_header)
 
     with open(os.path.join(target_dir, src_filename + ".c"), 'w') as out_cfile:
-        print(GENERATED_FILE_NOTE, file=out_cfile)
+        print(GENERATED_FILE_DISCLAIMER, file=out_cfile)
 
         # - Array containing all syscalls -
         print(f"#include \"{src_filename}.h\"", file=out_cfile)

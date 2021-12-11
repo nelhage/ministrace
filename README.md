@@ -4,7 +4,7 @@
 ministrace is a small strace implementation by Nelson Elhage
 (@nelhage).
 
-ministrace is a minimal implementation of strace originally about 70
+ministrace is a minimal implementation of strace originally about ~~70~~ 700
 lines of C. It isn't nearly as functional as the real thing, but you
 can use it to learn most of what you need to know about the core
 interfaces it uses.
