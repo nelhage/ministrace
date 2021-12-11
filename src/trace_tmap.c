@@ -17,6 +17,17 @@ static hash_t* global_map = NULL;
 
 /* -- Functions -- */
 /* - Internal functions - */
+/* ... hooks for hashmap */
+/* Hook is necessary for destroying map (and removing values) */
+int __del_hook(void* hash_data, void* caller_data) {
+    if (hash_data) {
+        LOG_DEBUG("Freeing child syscall state");    // DEBUGGING; TODO: print tid
+        free(hash_data);
+    }
+
+    return PLEASE_REMOVE_HASH_NODE;
+}
+
 /* ... debugging functions ... */
 #ifndef NDEBUG
 static int __sprint_syscall_state(child_syscall_state* scall, char* str_buf, size_t str_buf_size) {
@@ -41,19 +52,6 @@ static void __log_syscall_state(child_syscall_state* scall) {
 #else
 #  define LOG_DEBUG_SCALL_STATE(SCALL) do {} while(0)
 #endif /* NDEBUG */
-
-
-
-/* ... hooks for hashmap */
-/* Hook is necessary for destroying map (and removing values) */
-int __del_hook(void* hash_data, void* caller_data) {
-    if (hash_data) {
-        LOG_DEBUG("Freeing child syscall state");    // DEBUGGING; TODO: print tid
-        free(hash_data);
-    }
-
-    return PLEASE_REMOVE_HASH_NODE;
-}
 
 
 /* - Public functions - */

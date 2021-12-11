@@ -125,11 +125,11 @@ typedef struct hash
 
 /*
 Summary
-This is a hash table designed with high performance, lock-free and memory-saving. Multiple threads can concurrently perform read/write/delete operations up to 10M ops/s in mordern computer platform. It supports up to 2^32 hash items with O(1) performance for both of successful and unsuccessful search from the hash table.
-By giving max hash item number, atomic_hash calculates two load factors to match expected collision rate and creates array 1 with higer load factor, array 2 with lower load factor, and a small arry 3 to store collision items. memory pool for hash nodes (not for user data) is also designed for both of high performance and memory saving.
+This is a hash table designed with high performance, lock-free and memory-saving. Multiple threads can concurrently perform read/write/delete operations up to 10M ops/s in modern computer platform. It supports up to 2^32 hash items with O(1) performance for both of successful and unsuccessful search from the hash table.
+By giving max hash item number, atomic_hash calculates two load factors to match expected collision rate and creates array 1 with higher load factor, array 2 with lower load factor, and a small array 3 to store collision items. memory pool for hash nodes (not for user data) is also designed for both of high performance and memory saving.
 
 Usage
-Use below functions to create a hash handle that assosiates its arrays and memory pool, print statistics of it, or release it.
+Use below functions to create a hash handle that associates its arrays and memory pool, print statistics of it, or release it.
 
 hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl);
 int atomic_hash_stats (hash_t *h, unsigned long escaped_milliseconds);
@@ -158,7 +158,7 @@ h->on_ttl = your_own_on_ttl_hook_func;
 h->on_add = your_own_on_add_hook_func;
 ...
 
-In the call time, instead of hook functions registered in on_dup/on_get/on_del, hash functions atomic_hash_add, atomic_hash_get, atomic_hash_del are able to use an alertative function as long as they obey above hook function rules. This will give flexibility to deal with different user data type in a same hash table.
+In the call time, instead of hook functions registered in on_dup/on_get/on_del, hash functions atomic_hash_add, atomic_hash_get, atomic_hash_del are able to use an alternative function as long as they obey above hook function rules. This will give flexibility to deal with different user data type in a same hash table.
 
 
 About TTL

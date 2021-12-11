@@ -22,14 +22,14 @@
  */
 
 // $$ OWN ADDITIONS $$
-// added #ifdef DEBUG to some printfs to ommit debug output in non-debug build
+// added #ifdef DEBUG to some `printf`s to omit debug output in non-debug build
 
 // unused variables removed
 // uninitialized variables initialized to 0
 
 // solved comparison of integer with different signedness
 
-// Added 'static' keyword to all 'inline'd functions (https://stackoverflow.com/a/54875926)
+// Added `static` keyword to all `inline`d functions (https://stackoverflow.com/a/54875926)
 // $$ OWN ADDITIONS $$
 
 #include <stdio.h>
