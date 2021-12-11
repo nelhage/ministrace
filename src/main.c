@@ -1,6 +1,7 @@
 /*
  * TODOs:
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
+ *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
  */
 #include "trace_ptrace.h"
 #include <sys/wait.h>
@@ -20,7 +21,7 @@
 // #include "trace_tmap.h"
 
 /* -- Global consts -- */
-// #define DEFAULT_TMAP_MAX_SIZE 100
+// #define DEFAULT_TMAP_MAX_SIZE 500
 
 
 /* -- Function prototypes -- */
@@ -80,7 +81,7 @@ int do_tracee(int argc, char **argv) {
 
 
 /* -- Tracing -- */
-int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork) {
+int do_tracer(const pid_t pid, const int pause_on_syscall_nr, const bool follow_fork) {
 
 /* (0) Set ptrace options */
     int status;
@@ -159,13 +160,23 @@ bool wait_for_syscall_or_exit(pid_t pid) {
     siginfo_t si;
 
     while (1) {
-    /* (0) Restart stopped tracee but set next breakpoint (on next syscall)   (AND "forward" last received signal to tracee)
+    /* (0) Restart stopped tracee but set next breakpoint (on next syscall)   (AND "forward" received signal to tracee)
      *   ELUCIDATION:
      *     - `PTRACE_SYSCALL`: Restarts stopped tracee (similar to `PTRACE_CONT`),
      *                         but sets breakpoint at next syscall entry/exit
      *                         (Tracee will, as usual, be stopped upon receipt of a signal)
      *                         From the tracer's perspective, the tracee will appear to have
      *                         been stopped by receipt of a `SIGTRAP`
+     *
+     *     - Signal delivery:  Normally, when a (possibly multithreaded) process receives any signal (except
+     *                         `SIGKILL`), the kernel selects an arbitrary thread which handles the signal.
+     *                         (If the signal is generated w/ `tgkill`(2), the target thread can be
+     *                         explicitly selected by the caller.)
+     *
+     *                         However, if the selected thread is traced, it enters signal-delivery-stop.
+     *                         At this point, the signal is NOT YET delivered to the process, and can be
+     *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
+     *                         passes the signal to the tracee in the next ptrace restart request.
      */
         DIE_WHEN_ERRNO(ptrace(PTRACE_SYSCALL, pid, 0, sig));
 

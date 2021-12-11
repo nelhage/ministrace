@@ -95,10 +95,10 @@ void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
 
     static const struct argp_option cli_options[] = {
-        {"list-syscalls", 'l', NULL,   0, "List supported syscalls",         0},
-        {"follow-fork",   'f', NULL,   0, "Follow `fork`ed child processes", 1},
-        {"pause-snr",     'n', "nr",   0, "Pause on specified syscall nr",   2},
-        {"pause-sname",   'a', "name", 0, "Pause on specified syscall name", 2},
+        {"list-syscalls", 'l', NULL, 0, "List supported syscalls", 0},
+        {"follow-fork", 'f', NULL, 0, "Follow `fork`ed child processes", 1},
+        {"pause-snr", 'n', "nr", 0, "Pause on specified syscall nr", 2},
+        {"pause-sname", 'a', "name", 0, "Pause on specified syscall name", 2},
         {0}
     };
 

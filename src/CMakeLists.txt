@@ -16,11 +16,10 @@ add_custom_command(
 add_subdirectory(libs/hashmap)
 
 add_executable(ministrace
-        # map/impl/tmap.c
-
         __syscalls.c
         cli.c
         main.c
         trace_ptrace.c
-        trace_syscalls.c)
-# target_link_libraries(ministrace hashmap)
+        trace_syscalls.c
+        trace_tmap.c)
+target_link_libraries(ministrace hashmap)
