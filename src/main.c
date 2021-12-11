@@ -17,7 +17,7 @@
 #include "cli.h"
 #include "error.h"
 
-
+#include "trace_tmap.h"
 
 /* -- Function prototypes -- */
 void print_syscalls(void);
@@ -31,34 +31,19 @@ void wait_for_user_input(void);
 
 void print_syscall(pid_t pid, long syscall_nr);
 
-/*
-
-
-static void toggle_syscall_state(child_syscall_state_t* st) {
-  st.st = (st.st == SYSCALL_ENTERED ? SYSCALL_EXITED : SYSCALL_ENTERED);
-}
-*/
-
 
 /* -- Functions -- */
-/* - CLI args - */
-
-
-
-
 int main(int argc, char **argv) {
-/* - Parse CLI args - */
+/* 0. Parse CLI args */
     cli_args parsed_cli_args;
     parse_cli_args(argc, argv, &parsed_cli_args);
-
 
     if (parsed_cli_args.list_syscalls) {
         print_syscalls();
         return 0;
     }
 
-
-/* (0.) Fork child (gets args passed) */
+/* 1. Fork child (gets args passed) */
     int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ `argv[0]` + e.g., "--pause-snr", "<int>" */
     if (!strcmp("--", argv[child_args_offset])) {                   /* `--` for stop parsing cli args (otherwise args of to be traced program will be parsed) */
         child_args_offset++;
@@ -70,7 +55,26 @@ int main(int argc, char **argv) {
 }
 
 
-/* ----------------------------------------- ----------------------------------------- ----------------------------------------- ----------------------------------------- */
+/* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
+int do_tracee(int argc, char **argv) {
+/* exec setup: Create new array for argv of to be exec'd command */
+    char *child_exec_argv[argc + 1 /* NULL terminator */];
+    memcpy(child_exec_argv, argv, (argc * sizeof(argv[0])));
+    child_exec_argv[argc] = NULL;
+    const char* child_exec = child_exec_argv[0];
+
+/* `PTRACE_TRACEME` starts tracing + causes next signal (sent to this process) to stop it & notify the parent (via `wait`), so that the parent knows to start tracing */
+    ptrace(PTRACE_TRACEME);
+/* Stop oneself so parent can set tracing option + Parent will see exec syscall */
+    kill(getpid(), SIGSTOP);
+/* Execute actual program */
+    return execvp(child_exec, child_exec_argv);
+
+/* Error handling (in case exec failed) */
+    LOG_ERROR_AND_EXIT("Couldn't exec \"%s\"", child_exec);
+}
+
+
 /* -- Tracing -- */
 int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork) {
 
@@ -131,35 +135,18 @@ int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork) {
     return 0;
 }
 
-
-int do_tracee(int argc, char **argv) {
-/* exec setup: Create new array for argv of to be exec'd command */
-    char *child_exec_argv[argc + 1 /* NULL terminator */];
-    memcpy(child_exec_argv, argv, (argc * sizeof(argv[0])));
-    child_exec_argv[argc] = NULL;
-    const char* child_exec = child_exec_argv[0];
-
-/* `PTRACE_TRACEME` starts tracing + causes next signal (sent to this process) to stop it & notify the parent (via `wait`), so that the parent knows to start tracing */
-    ptrace(PTRACE_TRACEME);
-/* Stop oneself so parent can set tracing option + Parent will see exec syscall */
-    kill(getpid(), SIGSTOP);
-/* Execute actual program */
-    return execvp(child_exec, child_exec_argv);
-
-/* Error handling (in case exec failed) */
-    fprintf(stderr, "Couldn't exec \"%s\"\n", child_exec);
-    exit(1);
+void print_syscall(pid_t pid, long syscall_nr) {
+    fprintf(stderr, "%s(", get_syscall_name(syscall_nr));
+    print_syscall_args(pid, syscall_nr);
+    fprintf(stderr, ") = ");
 }
 
-
-/* -- Helper functions -- */
 void wait_for_user_input(void) {
     do {
         char buf[2];
         fgets(buf, sizeof(buf), stdin); // wait until user presses enter to continue
     } while (0);
 }
-
 
 bool wait_for_syscall_or_exit(pid_t pid) {
     int sig = 0;
@@ -249,11 +236,4 @@ bool wait_for_syscall_or_exit(pid_t pid) {
             return true;
         }
     }
-}
-
-
-void print_syscall(pid_t pid, long syscall_nr) {
-    fprintf(stderr, "%s(", get_syscall_name(syscall_nr));
-    print_syscall_args(pid, syscall_nr);
-    fprintf(stderr, ") = ");
 }

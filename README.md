@@ -23,7 +23,7 @@ detail how it works.
       * Install sources: `sudo apt-get source linux`
 * Out-of-source build:
   1. `mkdir build && cd build`
-  2. `ccmake ..` &rarr; press `c` &rarr; Set `LINUX_SRC_DIR` &rarr; press `g`
+  2. `ccmake -DCMAKE_BUILD_TYPE=Release ..` &rarr; press `c` &rarr; set `LINUX_SRC_DIR` &rarr; press `c` &rarr; press `g`
   3. `cmake --build .`
       * Executable will be in `build/src`
 

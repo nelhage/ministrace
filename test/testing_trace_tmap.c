@@ -1,7 +1,7 @@
 /**
  * Simple test program for validating functionality of tmap
  */
-#define _GNU_SOURCE         /* Necessary for gettid */
+#define _GNU_SOURCE         /* Necessary for `gettid` */
 #include <unistd.h>
 #include <asm/unistd.h>
 
