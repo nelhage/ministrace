@@ -16,25 +16,25 @@
 #define DEFAULT_TMAP_MAX_SIZE 100
 
 
-void assert_exists_in_map(pid_t tid, child_syscall_state *original_c_sstate) {
-    child_syscall_state *found_c_sstate = NULL;
-    tmap_get(&tid, &found_c_sstate);
+void assert_exists_in_map(const pid_t tid, const long *original_c_s_nr) {
+    long *found_c_s_nr = NULL;
+    tmap_get(&tid, &found_c_s_nr);
 
-    assert(found_c_sstate->s_state == original_c_sstate->s_state &&
-           found_c_sstate->s_nr == original_c_sstate->s_nr);
+    assert(*found_c_s_nr == *original_c_s_nr);
 }
 
-void assert_not_exists_in_map(pid_t tid) {
-    child_syscall_state *found_c_sstate = NULL;
-    tmap_get(&tid, &found_c_sstate);
+void assert_not_exists_in_map(const pid_t tid) {
+    long *found_c_s_nr = NULL;
+    tmap_get(&tid, &found_c_s_nr);
 
-    assert(!found_c_sstate);
+    assert(!found_c_s_nr);
 }
 
 
 int main (void) {
-    // Disable IO buffering for stdout
+    // Disable IO buffering
     setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
 
 
 /* Test 0: Setup */
@@ -43,20 +43,17 @@ int main (void) {
 
 /* Test 1: Insert value & check exists */
     pid_t tid = gettid();
-    child_syscall_state c_sstate = {
-            .s_nr = __NR_execve,
-            .s_state = SYSCALL_ENTERED
-    };
-    tmap_add_or_update(&tid, &c_sstate);
+    long c_s_nr = __NR_execve;
+    tmap_add_or_update(&tid, &c_s_nr);
 
-    assert_exists_in_map(tid, &c_sstate);
+    assert_exists_in_map(tid, &c_s_nr);
 
 
 /* Test 2: Update value & check updated */
-    c_sstate.s_state = SYSCALL_EXITED;
-    tmap_add_or_update(&tid, &c_sstate);
+    c_s_nr = -1;
+    tmap_add_or_update(&tid, &c_s_nr);
 
-    assert_exists_in_map(tid, &c_sstate);
+    assert_exists_in_map(tid, &c_s_nr);
 
 
 /* Test 3: Delete & check doesn't exist anymore */

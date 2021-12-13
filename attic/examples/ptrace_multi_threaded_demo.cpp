@@ -1,4 +1,4 @@
-// Compile: g++ ptrace_multi_threaded_demo.cpp -o test -lpthread
+// Compile: g++ ptrace_multi_threaded_demo.cpp -o ptrace_multi_threaded_demo -lpthread
 // Source: https://github.com/aleden/ptrace-multi-threaded-demo
 #include <unordered_map>
 #include <asm/unistd.h>
@@ -46,6 +46,8 @@ int main(int argc, char **argv) {
   const pid_t child = fork();
   if (!child)
     return do_child(argc, argv);
+
+
 
   //
   // parent
@@ -286,8 +288,7 @@ int main(int argc, char **argv) {
   pid_t pid = child; /* handle initial signal-delivery-stop */
   for (;;) {
     pid = wait_for_syscall_entry_or_exit(pid);
-    if (pid == -1)
-      break;
+    if (pid == -1) break;
 
     child_syscall_state_t &st = chld_sysc_map[pid];
     switch (st.st) {
@@ -349,6 +350,12 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
+
+
+
+
+
 
 static mutex mtx;
 static void do_thread(int n) {
