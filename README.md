@@ -1,8 +1,8 @@
 # ministrace v2
 
 ## 1. About
-ministrace is a small strace implementation by Nelson Elhage
-(@nelhage).
+ministrace v2 (or rather *medstrace*) is a ~~small~~ medium-sized strace implementation (v1 was originally written by Nelson Elhage
+(@nelhage)).
 
 ministrace is a minimal implementation of strace originally about ~~70~~ 700
 lines of C. It isn't nearly as functional as the real thing, but you
@@ -13,6 +13,9 @@ ministrace was written for a [blog post][1], which explains in some
 detail how it works.
 
 [1]: http://blog.nelhage.com/2010/08/write-yourself-an-strace-in-70-lines-of-code/
+
+### 1.1. Version history
+* v2: Supports tracing multi-threaded programs
 
 
 ## 2. Compile
@@ -27,7 +30,7 @@ detail how it works.
   3. `cmake --build .`
       * Executable will be in `build/src`
 
-## 3. Usage
+## 3. Basic Usage
 ```ministrace [--pause-snr <syscall nr>|--pause-sname <syscall name>] <program> [<args> ...]```
 
 Basic ministrace usage just takes a command line:
@@ -48,3 +51,5 @@ ministrace --pause-snr <syscall nr> <program> <program args>
 This will print out a sequence of system calls which are made, and
 block (waiting for an enter on ministrace's terminal) whenever the
 program is about to execute the specified system call.
+
+To see all available options, use `--help`.
