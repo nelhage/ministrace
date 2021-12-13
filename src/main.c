@@ -174,7 +174,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 
                 if (follow_fork) {
                     fprintf(stderr, "\n... [%d - %s (%ld)]",
-                            cur_tid, get_syscall_name(*found_child_s_nr), *found_child_s_nr);      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ TODO: WRONG SYSCALL
+                            cur_tid, get_syscall_name(*found_child_s_nr), *found_child_s_nr);
                 }
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
