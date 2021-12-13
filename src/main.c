@@ -21,7 +21,7 @@
 #include "trace_tmap.h"
 
 /* -- Global consts -- */
-#define DEFAULT_TMAP_MAX_SIZE 500
+#define DEFAULT_TMAP_MAX_SIZE 5000
 
 
 /* -- Function prototypes -- */
@@ -86,6 +86,9 @@ int do_tracee(int argc, char **argv) {
 
 /* -- Tracing -- */
 int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool follow_fork) {
+    // Disable IO buffering for accurate output   ---> !! TODO: REVISE (SLOWS DOWN TRACING) !!
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
 
 /* 0. Setup: Set ptrace options */
     int status;
@@ -115,7 +118,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
     unsigned int ptrace_setoptions = PTRACE_O_TRACESYSGOOD;
     if (follow_fork) {
 		ptrace_setoptions |= PTRACE_O_TRACECLONE
-				          | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;       // TODO: REVISE
+				          | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
     }
     ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions);
 
@@ -138,7 +141,13 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
           /* Thread has exited -> continue tracing */
             } else {
                LOG_DEBUG("Child thread %d exited, continuing ...", -(status_tid));
-               tmap_remove(&cur_tid);
+
+               long *found_child_s_nr = NULL;
+               tmap_get(&cur_tid, &found_child_s_nr);
+               if (found_child_s_nr) {
+                   tmap_remove(&cur_tid);           // Cleanup (only for tasks terminating B/W SYSCALL_ENTER & SYSCALL_EXIT)
+               }
+
                cur_tid = -1;
                continue;
            }
@@ -153,6 +162,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 
         /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
             if (!found_child_s_nr) {
+                LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
                 const long syscall_nr = get_reg_content(cur_tid, REG_SYSCALL_NR);
 
                 tmap_add_or_update(&cur_tid, &syscall_nr);
@@ -170,6 +180,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 
         /* >> Syscall EXIT (syscall return value) << */
             } else {
+                LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
                 const long syscall_rtn_val = get_reg_content(cur_tid, REG_SYSCALL_RTN_VAL);
 
                 if (follow_fork) {

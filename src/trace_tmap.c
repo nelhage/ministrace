@@ -11,7 +11,7 @@
 #define TTL_DISABLE 0
 
 
-#define NDEBUG_TMAP
+// #define NDEBUG_TMAP
 
 /* - Macros - */
 /* - Debugging stuff - */
@@ -117,7 +117,7 @@ void tmap_remove(pid_t *tid) {
 
     int map_operation_result;
     if ((map_operation_result = atomic_hash_del(global_map, tid, TMAP_KEY_SIZE, NULL, NULL))) {
-        LOG_ERROR_AND_EXIT("Couldn't delete value (child syscall state) (err_code=%d) using `tid` %d", map_operation_result, *tid);
+        LOG_ERROR_AND_EXIT("Couldn't delete value (i.e., child `s_nr`) (err_code=%d) using `tid` %d", map_operation_result, *tid);
     } else {
         LOG_DEBUG_TMAP("Removed child `s_nr` using `tid` %d", *tid);    // DEBUGGING
     }
