@@ -5,6 +5,7 @@ Generates header file containing information for syscalls
 
 TODOs: - ARM support
        - Add exceptions for args which should be pointers (but are of type unsigned long ?), e.g., `mmap`, `mprotect`. ... ??
+       - Return values of are always treated as int (e.g., `mmap`)
 '''
 import os
 import sys

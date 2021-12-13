@@ -2,6 +2,7 @@
  * TODOs:
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
  *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
+ *   - Issue: Return values of are always treated as int (e.g., `mmap`)
  */
 #include "trace_ptrace.h"
 #include <sys/wait.h>
@@ -107,7 +108,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
     /*
      * ELUCIDATION:
      *   - `PTRACE_O_TRACESYSGOOD`: Sets bit 7 in the signal number when delivering syscall traps
-     *                              (i.e., deliver SIGTRAP|0x80) (see `PTRACE_TRAP_INDICATOR_BIT`)
+     *                              (i.e., deliver `SIGTRAP|0x80`) (see `PTRACE_TRAP_INDICATOR_BIT`)
      *                              Makes it easier (for tracer) to distinguish b/w normal- & from syscalls caused traps
      *
      *   - `PTRACE_O_TRACECLONE`:   Stop the tracee at next `clone(2)` and automatically start tracing
@@ -242,7 +243,7 @@ int wait_for_syscall_or_exit(pid_t pid) {
 
     /* (1) Wait (i.e., block) for ANY tracee to change state (stops or terminates) */
         /* ELUCIDATION:
-         *   - `__WALL`: Wait for all children, regardless of type ("clone" or "non-clone")
+         *   - `__WALL`: Wait for all children, regardless of type (`clone` or non-`clone`)
          *               See also https://kernelnewbies.kernelnewbies.narkive.com/9Zd9eWeb/waitpid-2-and-clone-thread
          */
         int status;
@@ -257,10 +258,10 @@ int wait_for_syscall_or_exit(pid_t pid) {
          *     (III) Group-stops
          *     (IV)  Signal-delivery stops
          *   - Which are all reported by `waitpid`(2) w/ `WIFSTOPPED(status)` being true
-         *   - They may be differentiated by examining the value status>>8, and if
-         *     there's ambiguity in that value, by querying PTRACE_GETSIGINFO
+         *   - They may be differentiated by examining the value `status>>8`, and if
+         *     there's ambiguity in that value, by querying `PTRACE_GETSIGINFO`
          *     (Note: `WSTOPSIG(status)` can't be used to perform this
-         *      examination, b/c it returns the value (status>>8) & 0xff)
+         *      examination, b/c it returns the value `(status>>8) & 0xff`)
          *
          * ELUCIDATION:
          *   - `int WIFSTOPPED (int status)`: Returns nonzero value if child is stopped
