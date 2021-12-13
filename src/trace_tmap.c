@@ -21,7 +21,7 @@ static hash_t* global_map = NULL;
 /* Hook is necessary for destroying map (and removing values) */
 int __del_hook(void *hash_data, void *caller_data __attribute__((unused))) {
     if (hash_data) {
-        LOG_DEBUG("Freeing child `s_nr` %ld", *(long*)hash_data);    // DEBUGGING; TODO: print tid
+        LOG_DEBUG("Freeing child `s_nr` %ld", *((long*)hash_data));    // DEBUGGING; TODO: print tid
         free(hash_data);
     }
 

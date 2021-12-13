@@ -133,11 +133,11 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
         if (0 > status_tid) {
           /* Main thread has exited -> stop tracing */
             if (-(tracee_pid) == status_tid) {
-                LOG_DEBUG("Main thread %d has exited, stopping tracing ...", -(status_tid));
+                LOG_DEBUG("Main thread %d exited, stopping tracing ...", -(status_tid));
                 break;
           /* Thread has exited -> continue tracing */
             } else {
-               LOG_DEBUG("Child thread %d has exited, continuing ...", -(status_tid));
+               LOG_DEBUG("Child thread %d exited, continuing ...", -(status_tid));
                tmap_remove(&cur_tid);
                cur_tid = -1;
                continue;
@@ -145,7 +145,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 
       /* -> Thread stopped --> positive int = hit breakpoint */
         } else {
-            LOG_DEBUG("Thread %d has hit breakpoint ...", status_tid);
+            LOG_DEBUG("Thread %d hit breakpoint ...", status_tid);
             cur_tid = status_tid;
 
             long *found_child_s_nr = NULL;
@@ -172,12 +172,13 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
             } else {
                 const long syscall_rtn_val = get_reg_content(cur_tid, REG_SYSCALL_RTN_VAL);
 
-                tmap_remove(&cur_tid);
-
                 if (follow_fork) {
-                    fprintf(stderr, "\n... [%d] ", cur_tid);
+                    fprintf(stderr, "\n... [%d - %s (%ld)]",
+                            cur_tid, get_syscall_name(*found_child_s_nr), *found_child_s_nr);      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ TODO: WRONG SYSCALL
                 }
-                fprintf(stderr, "%ld\n", syscall_rtn_val);
+                fprintf(stderr, " = %ld\n", syscall_rtn_val);
+
+                tmap_remove(&cur_tid);
             }
         }
     }
@@ -190,7 +191,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 void print_syscall(pid_t pid, long syscall_nr) {
     fprintf(stderr, "%s(", get_syscall_name(syscall_nr));
     print_syscall_args(pid, syscall_nr);
-    fprintf(stderr, ") = ");
+    fprintf(stderr, ")");
 }
 
 void wait_for_user_input(void) {
