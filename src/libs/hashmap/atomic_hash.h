@@ -57,8 +57,7 @@ typedef struct hv { hvu x, y; } hv;
 #define shared __attribute__((aligned(64)))
 
 typedef uint32_t nid;
-typedef struct hstats
-{
+typedef struct {
     unsigned long expires;
     unsigned long escapes;
     unsigned long add_nomem;
@@ -71,13 +70,11 @@ typedef struct hstats
     unsigned long key_collided;
 } hstats_t;
 
-typedef struct hash_counters
-{
+typedef struct {
     unsigned long xadd, xget, xdel, nexp;
 } hc_t; /* 64-bytes cache line */
 
-typedef struct mem_pool
-{
+typedef struct {
     void **ba;
     shared nid mask, shift; /* used for i2p() only */
     shared nid max_blocks, blk_node_num, node_size, blk_size;
@@ -89,22 +86,19 @@ typedef union {
     uint64_t all;
 } cas_t;
 
-typedef struct hash_node
-{
+typedef struct {
     volatile hv v;
     unsigned long expire; /* expire in ms # of gettimeofday(), 0 = never */
     void *data;
 } node_t;
 
-typedef struct htab
-{
+typedef struct {
     nid *b;             /* hash tab (int arrary as memory index */
     unsigned long ncur, n, nb;  /* nb: buckets #, set by n * r */
     unsigned long nadd, ndup, nget, ndel;
 } htab_t;
 
-typedef struct hash
-{
+typedef struct {
 /* hash function, here select cityhash_128 as default */
     shared void (* hash_func) (const void *key, size_t len, void *r);
 
@@ -145,12 +139,12 @@ Not like normal hash functions that return user data directly, atomic hash funct
 
 typedef int (*hook)(void *hash_data, void *out)
 
-here 'hash_data' will be copied from target hash node's 'data' field by atomic hash functions (generally it is a pointer to link the user data), and 'out' will be given by atomic hash function's caller. There are 5 function pointers (on_ttl, on_del, on_add, on_get and on_dup) to resigster hook functions. The hook function should obey below rules:
+here 'hash_data' will be copied from target hash node's 'data' field by atomic hash functions (generally it is a pointer to link the user data), and 'out' will be given by atomic hash function's caller. There are 5 function pointers (on_ttl, on_del, on_add, on_get and on_dup) to register hook functions. The hook function should obey below rules:
 
 1. must be non-blocking and essential actions only. too much execution time will drop performance remarkablly;
 2. on_ttl and on_del should free user data and must return -1(PLEASE_REMOVE_HASH_NODE).
 3. on_get and on_dup may return either -2 (PLEASE_SET_TTL_TO_DEFAULT) or a positive number that indicates updating ttl;
-4. on_add must return -3 (PLEASE_DO_NOT_CHANGE_TTL) as ttl will be set by intital_ttl;
+4. on_add must return -3 (PLEASE_DO_NOT_CHANGE_TTL) as ttl will be set by initial_ttl;
 
 atomic_hash_create will initialize some built-in functions as default hook functions that only do value-copy for hash node's 'data' field and then return code. So you need to write your own hook functions to replace default ones if you want to free your user data's memeory or adjust ttl in the fly:
 
