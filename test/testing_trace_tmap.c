@@ -32,7 +32,7 @@ void assert_not_exists_in_map(const pid_t tid) {
 
 
 int main (void) {
-    // Disable IO buffering
+    /* Disable IO buffering */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 

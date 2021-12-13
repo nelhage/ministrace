@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
         return(1);
     }
 
-    // Disable IO buffering for stdout
+    /* Disable IO buffering for stdout */
     setvbuf(stdout, NULL, _IONBF, 0);
 
 

@@ -11,7 +11,7 @@
 #define TTL_DISABLE 0
 
 
-// #define NDEBUG_TMAP
+#define NDEBUG_TMAP
 
 /* - Macros - */
 /* - Debugging stuff - */
@@ -44,7 +44,7 @@ int __del_hook(void *hash_data, void *caller_data __attribute__((unused))) {
 /**
  * Shall be called by `init_process` in event.c
  */
-void tmap_create(size_t max_size) {
+void tmap_create(const size_t max_size) {
     if (global_map) {
         LOG_ERROR_AND_EXIT("tmap has been already init'ed");
     }
@@ -68,7 +68,7 @@ void tmap_destroy(void) {
     }
 }
 
-int tmap_get(pid_t *tid, long **s_nr) {
+int tmap_get(const pid_t *tid, long **s_nr) {
     if (!global_map || !tid) {
         LOG_ERROR_AND_EXIT("Invalid `tid` or uninit tmap");
     }
@@ -80,7 +80,7 @@ int tmap_get(pid_t *tid, long **s_nr) {
     return map_operation_result;
 }
 
-void tmap_add_or_update(pid_t *tid, long *s_nr) {
+void tmap_add_or_update(const pid_t *tid, const long *s_nr) {
     if (!global_map || !tid || !s_nr) {
         LOG_ERROR_AND_EXIT("Invalid `tid` / `s_nr` or uninit tmap");
     }
@@ -110,7 +110,7 @@ void tmap_add_or_update(pid_t *tid, long *s_nr) {
     }
 }
 
-void tmap_remove(pid_t *tid) {
+void tmap_remove(const pid_t *tid) {
     if (!global_map || !tid) {
         LOG_ERROR_AND_EXIT("Invalid `tid` or uninit tmap");
     }

@@ -134,18 +134,17 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
     /* Check status */
       /* Thread terminated --> negative int */
         if (0 > status_tid) {
-          /* Main thread has exited -> stop tracing */
             if (-(tracee_pid) == status_tid) {
                 LOG_DEBUG("Main thread %d exited, stopping tracing ...", -(status_tid));
                 break;
-          /* Thread has exited -> continue tracing */
             } else {
                LOG_DEBUG("Child thread %d exited, continuing ...", -(status_tid));
 
+               /* Cleanup (only necessary for terminated tasks who had PENDING SYSCALL_EXIT) */
                long *found_child_s_nr = NULL;
                tmap_get(&cur_tid, &found_child_s_nr);
                if (found_child_s_nr) {
-                   tmap_remove(&cur_tid);           // Cleanup (only for tasks terminating B/W SYSCALL_ENTER & SYSCALL_EXIT)
+                   tmap_remove(&cur_tid);
                }
 
                cur_tid = -1;
@@ -160,7 +159,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
             long *found_child_s_nr = NULL;
             tmap_get(&cur_tid, &found_child_s_nr);
 
-        /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
+          /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
             if (!found_child_s_nr) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
                 const long syscall_nr = get_reg_content(cur_tid, REG_SYSCALL_NR);
@@ -178,7 +177,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
                 }
 
 
-        /* >> Syscall EXIT (syscall return value) << */
+          /* >> Syscall EXIT (syscall return value) << */
             } else {
                 LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
                 const long syscall_rtn_val = get_reg_content(cur_tid, REG_SYSCALL_RTN_VAL);
@@ -233,13 +232,12 @@ int wait_for_syscall_or_exit(pid_t pid) {
      *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
      *                         passes the signal to the tracee in the next ptrace restart request.
      */
-        if (-1 != pid) {        // Allow function to ONLY WAIT (e.g., when prior child terminated)
+        if (-1 != pid) {        /* Allow function to ONLY WAIT (e.g., when prior child terminated) */
             DIE_WHEN_ERRNO(ptrace(PTRACE_SYSCALL, pid, 0, sig));
         }
 
-    /* Reset restart signal & pid */
+    /* Reset restart signal */
         sig = 0;
-        pid = -1;
 
 
     /* (1) Wait (i.e., block) for ANY tracee to change state (stops or terminates) */
@@ -310,7 +308,7 @@ int wait_for_syscall_or_exit(pid_t pid) {
          *     (II)  Child exited due to signal (check via `WIFSIGNALED(status)`)
          */
         } else {
-            return -wait_tid;
+            return -(wait_tid);
         }
     }
 }
