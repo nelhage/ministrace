@@ -115,7 +115,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
     unsigned int ptrace_setoptions = PTRACE_O_TRACESYSGOOD;
     if (follow_fork) {
 		ptrace_setoptions |= PTRACE_O_TRACECLONE
-				          /*| PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK*/;       // TODO: REVISE
+				          | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;       // TODO: REVISE
     }
     ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions);
 
@@ -158,7 +158,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
                 tmap_add_or_update(&cur_tid, &syscall_nr);
 
                 if (follow_fork) {
-                    fprintf(stderr, "[%d] ", cur_tid);
+                    fprintf(stderr, "\n[%d] ", cur_tid);
                 }
                 print_syscall(cur_tid, syscall_nr);
 
