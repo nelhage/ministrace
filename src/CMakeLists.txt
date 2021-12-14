@@ -6,9 +6,10 @@ find_package(PythonInterp 3.4 REQUIRED)
 add_custom_command(
     COMMENT "Parse syscalls from kernel source and generate source files"
     DEPENDS ${GEN_SYSCALLS_SCRIPT}
-    OUTPUT "${CMAKE_CURRENT_LIST_DIR}/__syscalls.c" "${CMAKE_CURRENT_LIST_DIR}/__syscalls.h"
+    OUTPUT "__syscalls.c" "__syscalls.h"
     COMMAND "${PYTHON_EXECUTABLE}"
-    ARGS ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR} ${CMAKE_CURRENT_LIST_DIR}
+    ARGS ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR} "."
+    WORKING_DIR "${ministrace_BINARY_DIR}"
 )
 
 
@@ -23,3 +24,6 @@ add_executable(ministrace
         trace_syscalls.c
         trace_tmap.c)
 target_link_libraries(ministrace hashmap)
+target_include_directories(ministrace PRIVATE
+        "${CMAKE_SOURCE_DIR}/src"
+        "${ministrace_BINARY_DIR}/src")
