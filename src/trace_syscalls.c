@@ -55,7 +55,7 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
                 break;
             }
             default:    /* e.g., ARG_PTR */
-                fprintf(stderr, "0x%lx", arg);
+                fprintf(stderr, "0x%lx", (unsigned long)arg);
                 break;
         }
         if (arg_nr != nargs -1)
@@ -76,7 +76,7 @@ void _fprint_str_esc(FILE* stream, char* str) {
         if (isprint(c) && c != '\\') {
             fputc(c, stream);
         } else {
-            fprintf(stream, "\\x%02x", c);
+            fprintf(stream, "\\x%02x", (unsigned char)c);
         }
     }
 }

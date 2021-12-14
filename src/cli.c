@@ -44,7 +44,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 
         case 'n':
             {
-                long parsed_syscall_nr;
+                long parsed_syscall_nr = -1;
                 if (__str_to_long(arg, &parsed_syscall_nr) < 0) {
                     argp_usage(state);
                 }

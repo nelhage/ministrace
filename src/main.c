@@ -87,7 +87,7 @@ int do_tracee(int argc, char **argv) {
 
 /* -- Tracing -- */
 int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool follow_fork) {
-    // Disable IO buffering for accurate output   ---> !! TODO: REVISE (SLOWS DOWN TRACING) !!
+    /* Disable IO buffering for accurate output */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 

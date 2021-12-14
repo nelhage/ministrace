@@ -29,9 +29,9 @@
 	} while(0)
 
 
-#define DIE_WHEN_ERRNO(FUNC) ({ \
+#define DIE_WHEN_ERRNO(FUNC) __extension__({ ({ \
     int __val = (FUNC); \
     (-1 == __val ? ({ LOG_ERROR_AND_EXIT("%s", strerror(errno)); -1; }) : __val); \
-})
+}); })
 
 #endif /* ERROR_H */
