@@ -653,7 +653,7 @@ valid_ttl (hash_t *h, unsigned long now, node_t *p, nid *seat, nid mi,
 
 #define idx(j) (j<(NCLUSTER*NKEY)?0:1)
 int
-atomic_hash_add (hash_t *h, void *kwd, int len, void *data,
+atomic_hash_add (hash_t *h, const void *kwd, int len, void *data,
                  int init_ttl, hook cbf_dup, void *arg)
 {
     register unsigned int i, j;
@@ -708,7 +708,7 @@ atomic_hash_add (hash_t *h, void *kwd, int len, void *data,
 }
 
 int
-atomic_hash_get (hash_t *h, void *kwd, int len, hook cbf, void *arg)
+atomic_hash_get (hash_t *h, const void *kwd, int len, hook cbf, void *arg)
 {
     register unsigned int i, j;
     register nid mi;
@@ -741,7 +741,7 @@ atomic_hash_get (hash_t *h, void *kwd, int len, hook cbf, void *arg)
 }
 
 int
-atomic_hash_del (hash_t *h, void *kwd, int len, hook cbf, void *arg)
+atomic_hash_del (hash_t *h, const void *kwd, int len, hook cbf, void *arg)
 {
     register unsigned int i, j;
     register nid mi;

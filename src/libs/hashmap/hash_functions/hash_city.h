@@ -57,8 +57,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-typedef uint8_t uint8;
-typedef uint32_t uint32;
+typedef uint8_t uint8 __attribute__((__unused__));
+typedef uint32_t uint32 __attribute__((__unused__));
 typedef uint64_t uint64;
 
 typedef struct _uint128 uint128;

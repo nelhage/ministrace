@@ -165,9 +165,9 @@ hash_node->expire: hash node's 'expire' field. If expire == 0, this hash node wi
 /* return (int): 0 for successful operation and non-zero for unsuccessful operation */
 hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl);
 int atomic_hash_destroy (hash_t *h);
-int atomic_hash_add (hash_t *h, void *key, int key_len, void *user_data, int init_ttl, hook func_on_dup, void *out);
-int atomic_hash_del (hash_t *h, void *key, int key_len, hook func_on_del, void *out); //delete all matches
-int atomic_hash_get (hash_t *h, void *key, int key_len, hook func_on_get, void *out); //get the first match
+int atomic_hash_add (hash_t *h, const void *key, int key_len, void *user_data, int init_ttl, hook func_on_dup, void *out);
+int atomic_hash_del (hash_t *h, const void *key, int key_len, hook func_on_del, void *out); //delete all matches
+int atomic_hash_get (hash_t *h, const void *key, int key_len, hook func_on_get, void *out); //get the first match
 int atomic_hash_stats (hash_t *h, unsigned long escaped_milliseconds);
 
 #endif /* ATOMIC_HASH_H */
