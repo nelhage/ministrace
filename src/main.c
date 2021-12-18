@@ -2,7 +2,9 @@
  * TODOs:
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
  *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
- *   - Issue: Return values of are always treated as int (e.g., `mmap`)
+ *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap`)
+ *
+ *   - ARM support, see https://github.com/nearffxx/ministrace/commit/ae5681bbe20d7a67551379206ecfaacbf5caea6a
  */
 #include "trace_ptrace.h"
 #include <sys/wait.h>
