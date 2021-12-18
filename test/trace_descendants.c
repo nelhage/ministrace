@@ -13,10 +13,10 @@
 void create_children(int max_children) {
     if (! DIE_WHEN_ERRNO(fork()) ) {
         static int child_count = 0;
-        printf("Descendant #%2d: My pid %d, my ppid %d\n", child_count +1, getpid(), getppid());
+        printf("Descendant #%2d: My pid %d, my ppid %d\n", child_count, getpid(), getppid());
         nanosleep((const struct timespec[]){{0, 300000000L}}, NULL);
 
-        if (((child_count)++) < MAX_CHILDREN) {
+        if (++(child_count) < max_children) {
             create_children(max_children);
         }
     } else {
