@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 
 /* Option 2a: Attach to existing process */
     } else if (-1 != parsed_cli_args.attach_to_process) {
-        return do_tracer(parsed_cli_args.attach_to_process,true, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork);
+        return do_tracer(parsed_cli_args.attach_to_process, true, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork);
 
 /* Option 2b: Run command (i.e., new process) */
     } else {

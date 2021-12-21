@@ -14,8 +14,10 @@ detail how it works.
 
 [1]: http://blog.nelhage.com/2010/08/write-yourself-an-strace-in-70-lines-of-code/
 
-### 1.1. Version history
-* v2: Supports tracing multi-threaded programs
+### 1.1. Version history 
+* v2: Adds support for &mldr;
+  * tracing multi-threaded programs
+  * attaching to already running processes
 
 
 ## 2. Compile
