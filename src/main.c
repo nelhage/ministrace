@@ -33,7 +33,7 @@ void print_syscalls(void);
 int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork);
 int do_tracee(int argc, char **argv);
 
-int wait_for_syscall_or_exit(pid_t pid);
+int wait_for_syscall_or_exit(pid_t pid, int *exit_status);
 
 void wait_for_user_input(void);
 
@@ -129,10 +129,11 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 /* 1. Trace */
     tmap_create(DEFAULT_TMAP_MAX_SIZE);
 
+    int exit_status = -1;
     pid_t cur_tid = tracee_pid;
     while(1) {
     /* Wait for a child to change state (stop or terminate) */
-        const pid_t status_tid = wait_for_syscall_or_exit(cur_tid);
+        const pid_t status_tid = wait_for_syscall_or_exit(cur_tid, &exit_status);
 
     /* Check status */
       /* Thread terminated --> negative int */
@@ -198,7 +199,7 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
 
     tmap_destroy();
 
-    return 0;
+    return exit_status;
 }
 
 void print_syscall(pid_t pid, long syscall_nr) {
@@ -212,7 +213,7 @@ void wait_for_user_input(void) {
     while ( '\n' != (c = getchar()) && EOF != c ) {} // wait until user presses enter to continue
 }
 
-int wait_for_syscall_or_exit(pid_t pid) {
+int wait_for_syscall_or_exit(pid_t pid, int *exit_status) {
     int sig = 0;
     siginfo_t si;
 
@@ -311,6 +312,12 @@ int wait_for_syscall_or_exit(pid_t pid) {
          *     (II)  Child exited due to signal (check via `WIFSIGNALED(status)`)
          */
         } else {
+            if (WIFEXITED(status)) {
+                *exit_status = WEXITSTATUS(status);
+            } else if (WIFSIGNALED(status)) {
+                *exit_status = WTERMSIG(status);
+            }
+
             return -(wait_tid);
         }
     }

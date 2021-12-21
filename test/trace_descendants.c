@@ -15,7 +15,10 @@
 void create_children(const int max_children) {
     static int child_count = 0;
 
-    if ((child_count)++ >= max_children) return;
+    if ((child_count)++ >= max_children) {
+        puts("");
+        return;
+    }
 
     pid_t child;
 /* Child */
