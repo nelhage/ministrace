@@ -4,6 +4,8 @@
  *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
  *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap`)
  *
+ *   - Do we need PTRACE_DETATCH when using `-p` (i.e., `PTRACE_ATTACH`) option ??
+ *
  *   - ARM support, see https://github.com/nearffxx/ministrace/commit/ae5681bbe20d7a67551379206ecfaacbf5caea6a
  */
 #include "trace_ptrace.h"
@@ -30,7 +32,7 @@
 /* -- Function prototypes -- */
 void print_syscalls(void);
 
-int do_tracer(pid_t pid, int pause_on_syscall_nr, bool follow_fork);
+int do_tracer(pid_t pid, bool attach_to_tracee,int pause_on_syscall_nr, bool follow_fork);
 int do_tracee(int argc, char **argv);
 
 int wait_for_syscall_or_exit(pid_t pid, int *exit_status);
@@ -46,20 +48,28 @@ int main(int argc, char **argv) {
     cli_args parsed_cli_args;
     parse_cli_args(argc, argv, &parsed_cli_args);
 
+
+/* Option 1: Print supported syscalls */
     if (parsed_cli_args.list_syscalls) {
         print_syscalls();
         return 0;
-    }
 
-/* 1. Fork child (gets args passed) */
-    int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ `argv[0]` + e.g., "--pause-snr", "<int>" */
-    if (!strcmp("--", argv[child_args_offset])) {                   /* `--` for stop parsing cli args (otherwise args of to be traced program will be parsed) */
-        child_args_offset++;
+/* Option 2a: Attach to existing process */
+    } else if (-1 != parsed_cli_args.attach_to_process) {
+        return do_tracer(parsed_cli_args.attach_to_process,true, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork);
+
+/* Option 2b: Run command (i.e., new process) */
+    } else {
+        /* 1. Fork child (gets args passed) */
+        int child_args_offset = 1 + parsed_cli_args.exec_arg_offset;    /* executable itself @ `argv[0]` + e.g., "--pause-snr", "<int>" */
+        if (!strcmp("--", argv[child_args_offset])) {                   /* `--` for stop parsing cli args (otherwise args of to be traced program will be parsed) */
+            child_args_offset++;
+        }
+        pid_t pid = DIE_WHEN_ERRNO(fork());
+        return (!pid) ?
+               (do_tracee(argc - child_args_offset, argv + child_args_offset)) :
+               (do_tracer(pid, false, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork));
     }
-    pid_t pid = DIE_WHEN_ERRNO(fork());
-    return (!pid) ?
-         (do_tracee(argc - child_args_offset, argv + child_args_offset)) :
-         (do_tracer(pid, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork));
 }
 
 
@@ -88,12 +98,27 @@ int do_tracee(int argc, char **argv) {
 
 
 /* -- Tracing -- */
-int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool follow_fork) {
+int do_tracer(const pid_t tracee_pid,
+              const bool attach_to_tracee,
+              const int pause_on_syscall_nr, const bool follow_fork) {
     /* Disable IO buffering for accurate output */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-/* 0. Setup: Set ptrace options */
+
+/* 0a. Setup: Wait until child stops */
+    if (attach_to_tracee) {
+        /*
+         * ELUCIDATION:
+         *  - `PTRACE_ATTACH`: Attach to process specified by `pid`
+         *                     (making it a tracee of the calling process)
+         *                     The tracee is sent a `SIGSTOP`, but
+         *                     will not necessarily have stopped by the
+         *                     completion of this call => hence, use `waitpid`(2)
+         */
+        DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));          /* For required permissions, see https://www.kernel.org/doc/Documentation/security/Yama.txt */
+    }
+
     int status;
     do {
         DIE_WHEN_ERRNO(waitpid(tracee_pid, &status, 0));
@@ -107,6 +132,8 @@ int do_tracer(const pid_t tracee_pid, const int pause_on_syscall_nr, const bool 
         LOG_ERROR_AND_EXIT("Couldn't stop child process");
     }
 
+
+/* 0b. Setup: Set ptrace options */
     /*
      * ELUCIDATION:
      *   - `PTRACE_O_TRACESYSGOOD`: Sets bit 7 in the signal number when delivering syscall traps
@@ -317,7 +344,7 @@ int wait_for_syscall_or_exit(pid_t pid, int *exit_status) {
             } else if (WIFSIGNALED(status)) {
                 *exit_status = WTERMSIG(status);
             }
-
+            
             return -(wait_tid);
         }
     }

@@ -72,13 +72,24 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
 
+        case 'p':
+            {
+                long parsed_attach_pid = -1;
+                if (__str_to_long(arg, &parsed_attach_pid) < 0) {
+                    argp_usage(state);
+                }
+
+                arguments->attach_to_process = (int)parsed_attach_pid;
+            }
+            break;
+
         case ARGP_KEY_ARG:
           /* Too many arguments */
           break;
 
         case ARGP_KEY_END:
           /* Not enough arguments */
-          if (state->arg_num < 1 && !arguments->list_syscalls) {
+          if (state->arg_num < 1 && (!arguments->list_syscalls && -1 == arguments->attach_to_process)) {
             argp_usage(state);
           }
           break;
@@ -96,17 +107,19 @@ void parse_cli_args(int argc, char** argv,
 
     static const struct argp_option cli_options[] = {
         {"list-syscalls", 'l', NULL, 0, "List supported syscalls", 0},
-        {"follow-fork", 'f', NULL, 0, "Follow `fork`ed child processes", 1},
-        {"pause-snr", 'n', "nr", 0, "Pause on specified syscall nr", 2},
-        {"pause-sname", 'a', "name", 0, "Pause on specified syscall name", 2},
+        {"attach", 'p', "pid", 0, "Attach to already running process", 1},
+        {"follow-forks", 'f', NULL, 0, "Follow `fork`ed child processes", 2},
+        {"pause-snr", 'n', "nr", 0, "Pause on specified syscall nr", 3},
+        {"pause-sname", 'a', "name", 0, "Pause on specified syscall name", 3},
         {0}
     };
 
   /* Defaults */
     parsed_cli_args_ptr->list_syscalls = false;
+    parsed_cli_args_ptr->attach_to_process = -1;
     parsed_cli_args_ptr->follow_fork = false;
-    parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
+        parsed_cli_args_ptr->exec_arg_offset = 0;
 
     static const struct argp argp = {
         cli_options, parse_cli_opt,
