@@ -28,21 +28,13 @@ long __get_reg_content(pid_t pid, size_t off_user_struct) {
  */
 long get_syscall_arg(pid_t pid, int which) {
     switch (which) {
-#ifdef __amd64__
-        case 0: return get_reg_content(pid, rdi);
-        case 1: return get_reg_content(pid, rsi);
-        case 2: return get_reg_content(pid, rdx);
-        case 3: return get_reg_content(pid, r10);
-        case 4: return get_reg_content(pid, r8);
-        case 5: return get_reg_content(pid, r9);
-#else
-        case 0: return get_reg_content(pid, ebx);
-        case 1: return get_reg_content(pid, ecx);
-        case 2: return get_reg_content(pid, edx);
-        case 3: return get_reg_content(pid, esi);
-        case 4: return get_reg_content(pid, edi);
-        case 5: return get_reg_content(pid, ebp);
-#endif
+        case 0: return get_reg_content(pid, REG_SYSCALL_ARG0);
+        case 1: return get_reg_content(pid, REG_SYSCALL_ARG1);
+        case 2: return get_reg_content(pid, REG_SYSCALL_ARG2);
+        case 3: return get_reg_content(pid, REG_SYSCALL_ARG3);
+        case 4: return get_reg_content(pid, REG_SYSCALL_ARG4);
+        case 5: return get_reg_content(pid, REG_SYSCALL_ARG5);
+
         default: return -1L;
     }
 }

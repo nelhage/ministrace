@@ -1,7 +1,7 @@
-/* 
+/*
  * atomic_hash.c
  *
- * 2012-2015 Copyright (c) 
+ * 2012-2015 Copyright (c)
  * Fred Huang, <divfor@gmail.com>
  * All rights reserved.
  *
@@ -80,17 +80,13 @@
           } while (0)
 
 
-static inline unsigned long
-nowms (void)
-{
+static inline unsigned long nowms (void) {
     struct timeval tv;
     gettimeofday (&tv, NULL);
     return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
 }
 
-mem_pool_t *
-create_mem_pool (unsigned int max_nodes, unsigned int node_size)
-{
+mem_pool_t *create_mem_pool (unsigned int max_nodes, unsigned int node_size) {
     unsigned int pwr2_max_nodes, pwr2_node_size, pwr2_total_size, pwr2_block_size;
     mem_pool_t *pmp;
 
@@ -138,9 +134,7 @@ create_mem_pool (unsigned int max_nodes, unsigned int node_size)
 }
 
 
-int
-destroy_mem_pool (mem_pool_t * pmp)
-{
+int destroy_mem_pool (mem_pool_t * pmp) {
     unsigned long i;
     if (!pmp)
         return -1;
@@ -157,9 +151,7 @@ destroy_mem_pool (mem_pool_t * pmp)
     return 0;
 }
 
-static inline nid *
-new_mem_block (mem_pool_t * pmp, volatile cas_t * recv_queue)
-{
+static inline nid * new_mem_block (mem_pool_t * pmp, volatile cas_t * recv_queue) {
     nid i, m, sz, head = 0;
     memword cas_t n, x, *pn;
     void *p;
@@ -196,31 +188,26 @@ new_mem_block (mem_pool_t * pmp, volatile cas_t * recv_queue)
     return (nid *) ((char *)p + m * sz);
 }
 
-int default_func_reset_ttl (void *hash_data, void *return_data)
-{
+int default_func_reset_ttl (void *hash_data, void *return_data) {
     if (return_data)
         *((void **)return_data) = hash_data;
     return PLEASE_SET_TTL_TO_DEFAULT;
 }
 
 /* define your own func to return different ttl or removal instructions */
-int default_func_not_change_ttl (void *hash_data, void *return_data)
-{
+int default_func_not_change_ttl (void *hash_data, void *return_data) {
     if (return_data)
         *((void **)return_data) = hash_data;
     return PLEASE_DO_NOT_CHANGE_TTL;
 }
 
-int default_func_remove_node (void *hash_data, void *return_data)
-{
+int default_func_remove_node (void *hash_data, void *return_data) {
     if (return_data)
         *((void **)return_data) = hash_data;
     return PLEASE_REMOVE_HASH_NODE;
 }
 
-int
-init_htab (htab_t * ht, unsigned long num, double ratio)
-{
+int init_htab (htab_t * ht, unsigned long num, double ratio) {
     unsigned long i, nb;
     nb = num * ratio;
     for (i = 134217728; nb > i; i *= 2);
@@ -345,9 +332,7 @@ atomic_hash_create (unsigned int max_nodes, int reset_ttl)
     return NULL;
 }
 
-int
-atomic_hash_stats (hash_t * h, unsigned long escaped_milliseconds)
-{
+int atomic_hash_stats (hash_t * h, unsigned long escaped_milliseconds) {
     const hstats_t *t = &h->stats;
     const htab_t *ht1 = &h->ht[0], *ht2 = &h->ht[1];
     htab_t *p;
@@ -400,9 +385,7 @@ atomic_hash_stats (hash_t * h, unsigned long escaped_milliseconds)
     return 0;
 }
 
-int
-atomic_hash_destroy (hash_t * h)
-{
+int atomic_hash_destroy (hash_t * h) {
     unsigned int j;
     if (!h) return -1;
 
@@ -413,9 +396,7 @@ atomic_hash_destroy (hash_t * h)
     return 0;
 }
 
-static inline nid
-new_node (hash_t * h)
-{
+static inline nid new_node (hash_t * h) {
     memword cas_t n, m;
     while (h->freelist.cas.mi != NNULL || new_mem_block (h->mp, &h->freelist))
     {
@@ -431,9 +412,7 @@ new_node (hash_t * h)
     return NNULL;
 }
 
-static inline void
-free_node (hash_t * h, nid mi)
-{
+static inline void free_node (hash_t * h, nid mi) {
     memword cas_t n, m;
     cas_t *p = (cas_t *) (i2p (h->mp, node_t, mi));
     p->cas.rfn = 0;
@@ -447,24 +426,18 @@ free_node (hash_t * h, nid mi)
     while (!cas (&h->freelist.all, n.all, m.all));
 }
 
-static inline void
-set_hash_node (node_t * p, hv v, void *data, unsigned long expire)
-{
+static inline void set_hash_node (node_t * p, hv v, void *data, unsigned long expire) {
     p->v = v;
     p->expire = expire;
     p->data = data;
 }
 
-static inline int
-likely_equal (hv w, hv v)
-{
+static inline int likely_equal (hv w, hv v) {
     return w.y == v.y;
 }
 
 /* only called in atomic_hash_get */
-static inline int
-try_get (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn)
-{
+static inline int try_get (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn) {
     hold_bucket_otherwise_return_0 (p->v, v);
     if (*seat != mi)
     {
@@ -491,9 +464,7 @@ try_get (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void
 }
 
 /* only called in atomic_hash_add */
-static inline int
-try_dup (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn)
-{
+static inline int try_dup (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn) {
     hold_bucket_otherwise_return_0 (p->v, v);
     if (*seat != mi)
     {
@@ -520,9 +491,7 @@ try_dup (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void
 }
 
 /* only called in atomic_hash_add */
-static inline int
-try_add (hash_t *h, node_t *p, nid *seat, nid mi, int idx, void *rtn)
-{
+static inline int try_add (hash_t *h, node_t *p, nid *seat, nid mi, int idx, void *rtn) {
     hvu x = p->v.x;
     p->v.x = 0;
     if (!cas (seat, NNULL, mi))
@@ -550,9 +519,7 @@ try_add (hash_t *h, node_t *p, nid *seat, nid mi, int idx, void *rtn)
 }
 
 /* only called in atomic_hash_del */
-static inline int
-try_del (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn)
-{
+static inline int try_del (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn) {
     hold_bucket_otherwise_return_0 (p->v, v);
     if (*seat != mi || !cas (seat, mi, NNULL))
     {
@@ -571,10 +538,8 @@ try_del (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void
     return 1;
 }
 
-static inline int
-valid_ttl (hash_t *h, unsigned long now, node_t *p, nid *seat, nid mi,
-           int idx, nid *node_rtn, void *data_rtn)
-{
+static inline int valid_ttl (hash_t *h, unsigned long now, node_t *p, nid *seat, nid mi,
+           int idx, nid *node_rtn, void *data_rtn) {
     unsigned long expire = p->expire;
     /* valid state, quickly skip to call try_action. */
     if (expire == 0 || expire > now)
@@ -652,10 +617,8 @@ valid_ttl (hash_t *h, unsigned long now, node_t *p, nid *seat, nid mi,
 */
 
 #define idx(j) (j<(NCLUSTER*NKEY)?0:1)
-int
-atomic_hash_add (hash_t *h, const void *kwd, int len, void *data,
-                 int init_ttl, hook cbf_dup, void *arg)
-{
+int atomic_hash_add (hash_t *h, const void *kwd, int len, void *data,
+                 int init_ttl, hook cbf_dup, void *arg) {
     register unsigned int i, j;
     register nid mi;
     register node_t *p;
@@ -707,9 +670,7 @@ atomic_hash_add (hash_t *h, const void *kwd, int len, void *data,
     return 1; /* hash value exists */
 }
 
-int
-atomic_hash_get (hash_t *h, const void *kwd, int len, hook cbf, void *arg)
-{
+int atomic_hash_get (hash_t *h, const void *kwd, int len, hook cbf, void *arg) {
     register unsigned int i, j;
     register nid mi;
     register node_t *p;
@@ -740,9 +701,7 @@ atomic_hash_get (hash_t *h, const void *kwd, int len, hook cbf, void *arg)
     return -1;
 }
 
-int
-atomic_hash_del (hash_t *h, const void *kwd, int len, hook cbf, void *arg)
-{
+int atomic_hash_del (hash_t *h, const void *kwd, int len, hook cbf, void *arg) {
     register unsigned int i, j;
     register nid mi;
     register node_t *p;
