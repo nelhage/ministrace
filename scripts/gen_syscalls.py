@@ -3,7 +3,7 @@
 '''
 Generates header file containing information for syscalls
 
-TODOs: - ARM support
+TODOs: - Improve parsing for ARM (`Some syscalls have missing args`)
        - Add exceptions for args which should be pointers (but are of type unsigned long ?), e.g., `mmap`, `mprotect`. ... ??
        - Return values of are always treated as int (e.g., `mmap`)
 '''
@@ -28,6 +28,13 @@ LINUX_SRC_PARSING_ARCH_SPECIFIC = {
         'src_dirs': ['arch/x86'],
         'compat_abi': None,              # ??
         'preprocess_src_callback': None
+    },
+    'aarch64': {
+        'tbl_file': "./arch/arm/tools/syscall.tbl",
+        'src_dirs': ['arch/arm64'],
+        'compat_abi': None,              # ??
+        'preprocess_src_callback': lambda code_fragment: code_fragment if "arg_u32p" not in code_fragment else
+            re.sub(r"arg_u32p\((.+?)\)", r"u32, \1_lo, u32, \1_hi", code_fragment)   # Little endian seems to be most common ??
     }
 }
 
