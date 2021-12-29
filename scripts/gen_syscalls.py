@@ -103,7 +103,7 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir: str, arch_specific_src_
         syscall_code_fragment_line_start = -1
         for line_nr, line in enumerate(src_file):
             line = line.strip()
-            if not found_start_of_syscall_code_fragment and 'SYSCALL_DEFINE' in line:   # Found new potential syscall fragment ...
+            if not found_start_of_syscall_code_fragment and bool(re.search(r'SYSCALL_DEFINE\d\(', line)):   # Found new potential syscall fragment ...
                 syscall_code_fragment = ''
                 syscall_code_fragment_line_start = line_nr +1
                 found_start_of_syscall_code_fragment = True
@@ -149,7 +149,7 @@ def parse_found_syscall_code_fragment(syscall_code_fragment: str) -> tuple:
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
-def generate_syscalls_header(kernel_version: str, cpu_arch: str,
+def generate_src_files(kernel_version: str, cpu_arch: str,
                              arch_compat_abi: str,
                              target_dir: str, src_filename: str,
                              syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
@@ -255,7 +255,7 @@ def main(args):
     syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir, arch_specific_src_dirs)
 
     target_dir = args[1] if len(args) == 2 else GENERATED_SRC_FILES_DEFAULT_OUTPUT_DIR
-    generate_syscalls_header(
+    generate_src_files(
             kernel_version, cpu_arch,
             arch_compat_abi,
             target_dir, GENERATED_SRC_FILENAME,
