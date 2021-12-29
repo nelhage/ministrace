@@ -14,12 +14,23 @@ import subprocess
 
 
 # --- Globals ---
-TYPES_HEADER = "syscall_types.h"
+# - Linux src -
+LINUX_SRC_PARSING_ARCH_SPECIFIC = {
+    'x86_64': {
+        'tbl_file': "./arch/x86/entry/syscalls/syscall_64.tbl",
+        'src_dirs': ['arch/x86'],
+        'compat_abi': "x32"
+    },
+    'i386': {
+        'tbl_file': "./arch/x86/entry/syscalls/syscall_32.tbl",
+        'src_dirs': ['arch/x86'],
+        'compat_abi': None              # ??
+    }
+}
 
-GENERATED_SRC_FILENAME = '__syscalls'
 
-GENERATED_HEADER_SYSCALL_STRUCT_NAME = "sys_call"
-GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"
+# - Existing src -
+GENERATED_HEADER_INCLUDE_TYPES_HEADER = "syscall_types.h"
 
 class GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
     INT = "ARG_INT"
@@ -27,6 +38,14 @@ class GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
     STR = "ARG_STR"
 
 GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE = 6
+
+
+# - Generated source -
+GENERATED_HEADER_SYSCALL_STRUCT_NAME = "sys_call"
+GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"
+
+GENERATED_SRC_FILES_DEFAULT_OUTPUT_DIR = "."
+GENERATED_SRC_FILENAME = '__syscalls'
 
 
 
@@ -67,11 +86,12 @@ def parse_syscalls_name_and_nr_from_tbl(tbl_file: str) -> dict:
 
 
 
-def find_and_parse_syscalls_args_from_src(linux_src_dir: str) -> dict:
+def find_and_parse_syscalls_args_from_src(linux_src_dir: str, arch_specific_src_dirs: list) -> dict:
     syscalls_args = {}
+
     found_src_files = subprocess.Popen(["find"] +
                             [os.path.join(linux_src_dir, d) for d in
-                                "arch/x86 fs include ipc kernel mm net security".split()] +
+                                arch_specific_src_dirs + "fs include ipc kernel mm net security".split()] +
                             ["-name", "*.c", "-print"],
                             stdout = subprocess.PIPE).stdout
 
@@ -92,6 +112,7 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir: str) -> dict:
                 if line.endswith(')'):                                                  # Found END of syscall definition
                     (syscall_name, parsed_syscall_args) = parse_found_syscall_code_fragment(syscall_code_fragment)
                     if syscall_name is not None:
+
                         syscalls_args[syscall_name] = SRCParsedFoundSyscallFragment(
                             SRCFoundSyscallFragment(syscall_code_fragment, syscall_code_fragment_line_start, src_file_path),
                             parsed_syscall_args)
@@ -107,14 +128,14 @@ def parse_found_syscall_code_fragment(syscall_code_fragment: str) -> tuple:
     if syscall_code_fragment.startswith('SYSCALL_DEFINE('):
         m = re.search(r'^SYSCALL_DEFINE\(([^)]+)\)\(([^)]+)\)$', syscall_code_fragment)
         if not m:
-            print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
+            print("Unable to parse (1):", syscall_code_fragment, file=sys.stderr)
             return (None, None)
         syscall_name, args = m.groups()
         parsed_syscall_arg_types = [s.strip().rsplit(" ", 1)[0] for s in args.split(",")]
     else:
         m = re.search(r'^(?:COMPAT_)?SYSCALL_DEFINE(\d)\(([^,]+)\s*(?:,\s*([^)]+))?\)$', syscall_code_fragment)
         if not m:
-            print("Unable to parse:", syscall_code_fragment, file=sys.stderr)
+            print("Unable to parse (2):", syscall_code_fragment, file=sys.stderr)
             return (None, None)
         nargs, syscall_name, argstr = m.groups()
         if argstr is not None:
@@ -128,20 +149,22 @@ def parse_found_syscall_code_fragment(syscall_code_fragment: str) -> tuple:
 
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
-def generate_syscalls_header(target_dir: str, src_filename: str,
+def generate_syscalls_header(kernel_version: str, cpu_arch: str,
+                             arch_compat_abi: str,
+                             target_dir: str, src_filename: str,
                              syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
 
-    generate_syscall_macro_name = lambda name, abi: f"__SNR_{'x32_' if abi == 'x32' else ''}{name}"
-    GENERATED_FILE_DISCLAIMER = "/*\n * Generated file. Do not edit manually or check into VCS.\n *\n */"
+    generate_syscall_macro_name = lambda name, abi: f"__SNR_{'COMPAT_' if abi == arch_compat_abi else ''}{name}"
+    generated_file_disclaimer = f"/*\n * Generated file (for kernel version {kernel_version} on {cpu_arch}). Do not edit manually or check into VCS.\n *\n */"
 
     with open(os.path.join(target_dir, src_filename + ".h"), 'w') as out_header:
         # - Header of header file -
         header_guard_name = f"{src_filename}.h".replace("-", "_").replace(".", "_").upper()
 
-        print(GENERATED_FILE_DISCLAIMER, file=out_header)
+        print(generated_file_disclaimer, file=out_header)
         print("#ifndef {0}\n#define {0}\n".format(header_guard_name), file=out_header)
 
-        print(f"#include \"{TYPES_HEADER}\"\n", file=out_header)
+        print(f"#include \"{GENERATED_HEADER_INCLUDE_TYPES_HEADER}\"\n", file=out_header)
 
         print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}", file=out_header)
         print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out_header)
@@ -164,7 +187,7 @@ def generate_syscalls_header(target_dir: str, src_filename: str,
         print(f"#endif /* {header_guard_name} */", file=out_header)
 
     with open(os.path.join(target_dir, src_filename + ".c"), 'w') as out_cfile:
-        print(GENERATED_FILE_DISCLAIMER, file=out_cfile)
+        print(generated_file_disclaimer, file=out_cfile)
 
         # - Array containing all syscalls -
         print(f"#include \"{src_filename}.h\"", file=out_cfile)
@@ -215,15 +238,26 @@ def main(args):
 
     _, _, kernel_version, _, cpu_arch = os.uname()
 
+    arch_tbl_file = None
+    arch_specific_src_dirs = None
+    arch_compat_abi = None
+    try:
+        arch_spec = LINUX_SRC_PARSING_ARCH_SPECIFIC[cpu_arch]
+        arch_tbl_file = arch_spec['tbl_file']
+        arch_specific_src_dirs = arch_spec['src_dirs']
+        arch_compat_abi = arch_spec['compat_abi']
+    except KeyError:
+        print(f"Err: Unsupported CPU arch ({cpu_arch})", file=sys.stderr)
+        return 1
+
     linux_src_dir = args[0]
-    tbl_file_basedir = "./arch/x86/entry/syscalls/"
-    tbl_file = "syscall_64.tbl" if cpu_arch == 'x86_64' else "syscall_32.tbl"
+    syscalls_parsed_from_tbl = parse_syscalls_name_and_nr_from_tbl(os.path.join(linux_src_dir, arch_tbl_file))
+    syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir, arch_specific_src_dirs)
 
-    syscalls_parsed_from_tbl = parse_syscalls_name_and_nr_from_tbl(os.path.join(linux_src_dir, tbl_file_basedir, tbl_file))
-    syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir)
-
-    target_dir = args[1] if len(args) == 2 else "."
+    target_dir = args[1] if len(args) == 2 else GENERATED_SRC_FILES_DEFAULT_OUTPUT_DIR
     generate_syscalls_header(
+            kernel_version, cpu_arch,
+            arch_compat_abi,
             target_dir, GENERATED_SRC_FILENAME,
             syscalls_parsed_from_tbl, syscalls_parsed_from_scr)
 
