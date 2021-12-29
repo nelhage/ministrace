@@ -11,6 +11,7 @@ import os
 import sys
 import re
 import subprocess
+from typing import Callable
 
 
 # --- Globals ---
@@ -19,12 +20,14 @@ LINUX_SRC_PARSING_ARCH_SPECIFIC = {
     'x86_64': {
         'tbl_file': "./arch/x86/entry/syscalls/syscall_64.tbl",
         'src_dirs': ['arch/x86'],
-        'compat_abi': "x32"
+        'compat_abi': "x32",
+        'preprocess_src_callback': None
     },
     'i386': {
         'tbl_file': "./arch/x86/entry/syscalls/syscall_32.tbl",
         'src_dirs': ['arch/x86'],
-        'compat_abi': None              # ??
+        'compat_abi': None,              # ??
+        'preprocess_src_callback': None
     }
 }
 
@@ -86,7 +89,7 @@ def parse_syscalls_name_and_nr_from_tbl(tbl_file: str) -> dict:
 
 
 
-def find_and_parse_syscalls_args_from_src(linux_src_dir: str, arch_specific_src_dirs: list) -> dict:
+def find_and_parse_syscalls_args_from_src(linux_src_dir: str, arch_specific_src_dirs: list, preprocess_src_callback: Callable) -> dict:
     syscalls_args = {}
 
     found_src_files = subprocess.Popen(["find"] +
@@ -110,6 +113,7 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir: str, arch_specific_src_
             if found_start_of_syscall_code_fragment:
                 syscall_code_fragment += line
                 if line.endswith(')'):                                                  # Found END of syscall definition
+                    syscall_code_fragment = preprocess_src_callback(syscall_code_fragment) if preprocess_src_callback else syscall_code_fragment
                     (syscall_name, parsed_syscall_args) = parse_found_syscall_code_fragment(syscall_code_fragment)
                     if syscall_name is not None:
 
@@ -238,21 +242,22 @@ def main(args):
 
     _, _, kernel_version, _, cpu_arch = os.uname()
 
-    arch_tbl_file = None
-    arch_specific_src_dirs = None
-    arch_compat_abi = None
+    arch_spec = None
     try:
         arch_spec = LINUX_SRC_PARSING_ARCH_SPECIFIC[cpu_arch]
-        arch_tbl_file = arch_spec['tbl_file']
-        arch_specific_src_dirs = arch_spec['src_dirs']
-        arch_compat_abi = arch_spec['compat_abi']
     except KeyError:
         print(f"Err: Unsupported CPU arch ({cpu_arch})", file=sys.stderr)
         return 1
 
+    arch_tbl_file = arch_spec['tbl_file']
+    arch_specific_src_dirs = arch_spec['src_dirs']
+    arch_compat_abi = arch_spec['compat_abi']
+    arch_preprocess_src_callback = arch_spec['preprocess_src_callback']
+
+
     linux_src_dir = args[0]
     syscalls_parsed_from_tbl = parse_syscalls_name_and_nr_from_tbl(os.path.join(linux_src_dir, arch_tbl_file))
-    syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir, arch_specific_src_dirs)
+    syscalls_parsed_from_scr = find_and_parse_syscalls_args_from_src(linux_src_dir, arch_specific_src_dirs, arch_preprocess_src_callback)
 
     target_dir = args[1] if len(args) == 2 else GENERATED_SRC_FILES_DEFAULT_OUTPUT_DIR
     generate_src_files(
