@@ -11,8 +11,7 @@ set(MAP_SOURCE
         atomic_hash.c)
 
 set(MAP_COMPILE_OPTIONS
-        -fPIC
-        -march=native -msse4.2)     # ?? Really necessary
+        -fPIC)
 
 set(MAP_LINK_LIBS
         m
@@ -21,12 +20,19 @@ set(MAP_LINK_LIBS
 
 # IMPORTANT: Must match macros in `atomic_hash.h`
 if (FUNCTION STREQUAL "CITY3HASH_128")
-    list(APPEND MAP_COMPILE_OPTIONS -DFUNCTION=1)
-    list(APPEND MAP_SOURCE hash_functions/hash_city.c)
+    list(APPEND MAP_COMPILE_OPTIONS
+        -DFUNCTION=1
+        -march=native -msse4.2)
+    list(APPEND MAP_SOURCE
+        hash_functions/hash_city.c)
 elseif (FUNCTION STREQUAL "MD5HASH")
-    list(APPEND MAP_SOURCE hash_functions/hash_md5.c)
-    list(APPEND MAP_COMPILE_OPTIONS -DFUNCTION=2)
-    list(APPEND MAP_LINK_LIBS ssl crypto)
+    list(APPEND MAP_SOURCE
+        hash_functions/hash_md5.c)
+    list(APPEND MAP_COMPILE_OPTIONS
+        -DFUNCTION=2)
+    list(APPEND MAP_LINK_LIBS
+        ssl
+        crypto)
 else()
     error("Invalid function")
 endif()

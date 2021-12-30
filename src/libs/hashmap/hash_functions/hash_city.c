@@ -414,8 +414,7 @@ static void CityHashCrc256Long(const char *s, size_t len,
     size_t iters = len / 240;
     len -= iters * 240;
     do {
-#define CHUNK(multiplier, z)                                    \
-    {                                                           \
+#define CHUNK(multiplier, z) {                                  \
       uint64 old_a = a;                                         \
       a = Rotate(b, 41 ^ z) * multiplier + Fetch64(s);          \
       b = Rotate(c, 27 ^ z) * multiplier + Fetch64(s + 8);      \
@@ -507,13 +506,10 @@ uint128 CityHashCrc128(const char *s, size_t len) {
         return crc;
     }
 }
+#endif /* __SSE4_2__ */
 
-#endif
 
-
-inline void
-cityhash_128 (const void *s, const size_t len, void *r)
-{
+inline void cityhash_128 (const void *s, const size_t len, void *r) {
     *(uint128 *)r = CityHashCrc128 ((char *)s, len);
     if (((uint64_t *)r)[0] == 0) ((uint64_t *)r)[0] += 1;
     if (((uint64_t *)r)[1] == 0) ((uint64_t *)r)[1] += 1;
