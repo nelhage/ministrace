@@ -1,3 +1,6 @@
+// Note: Requires installed libssl-dev + linker flag `-lssl -lcrypto`
+#include <openssl/md5.h>
+
 #include "hash_md5.h"
 
 
