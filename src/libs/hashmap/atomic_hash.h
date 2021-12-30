@@ -39,16 +39,9 @@ typedef int (* hook) (void *hash_data, void *rtn_data);
 /* -- Avaiable hash functions -- */
 #define CITY3HASH_128 1
 #define MD5HASH 2
-#define MPQ3HASH 3
-#define NEWHASH 4
-#define MURMUR3HASH_128 5
 
 
-#if FUNCTION == MPQ3HASH || FUNCTION == NEWHASH
-#define NCMP 3
-typedef uint32_t hvu;
-typedef struct hv { hvu x, y, z; } hv_t;
-#elif FUNCTION == CITY3HASH_128 || FUNCTION == MURMUR3HASH_128 || FUNCTION == MD5HASH
+#if FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH
 #define NCMP 2
 typedef uint64_t hvu;
 typedef struct hv { hvu x, y; } hv;

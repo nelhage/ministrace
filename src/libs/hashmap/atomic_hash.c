@@ -60,9 +60,7 @@
 
 
 
-#if FUNCTION == MPQ3HASH || FUNCTION == NEWHASH
-#  define NKEY 3
-#elif FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH || FUNCTION == MURMUR3HASH_128
+#if FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH
 #  define NKEY 4
 #endif
 
@@ -247,20 +245,9 @@ hash_t *atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     memset (h, 0, sizeof (*h));
 
 
-#if FUNCTION == MPQ3HASH
-#  include "hash_functions/hash_mpq.h"
-  uint32_t ct[0x500];
-  init_crypt_table (ct);
-  h->hash_func = mpq3hash;
-#elif FUNCTION == NEWHASH
-#  include "hash_functions/hash_newhash.h"
-  h->hash_func = newhash;
-#elif FUNCTION == MD5HASH
+#if FUNCTION == MD5HASH
 #  include "hash_functions/hash_md5.h"
   h->hash_func = md5hash;
-#elif FUNCTION == MURMUR3HASH_128
-#  include "hash_functions/hash_murmur3.h"
-  h->hash_func = MurmurHash3_x64_128;
 #elif FUNCTION == CITY3HASH_128
 #  include "hash_functions/hash_city.h"
     h->hash_func = cityhash_128;
