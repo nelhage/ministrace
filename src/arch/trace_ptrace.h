@@ -11,8 +11,14 @@
 /* -- Macros / Function prototypes -- */
 /*
  * ELUCIDATION:
- *  - `ORIG_RAX` = Value of RAX BEFORE syscall (syscall nr)
- *  - `RAX`      = Return value of syscall
+ *  - The ABI specifies the calling convention used for syscalls
+ *    -> Calling conventions for every architecture are described
+ *       in the `syscall(2)` man page
+ *  - `orig_` prefix: Refers to initial value in register (on
+ *      syscall enter)
+ *    Used when register is used to hold the ...
+ *      - syscall nr (on syscall enter) AND
+ *      - return value (on syscall exit)
  */
 #if defined(__amd64__)
 #  define REG_SYSCALL_NR orig_rax
