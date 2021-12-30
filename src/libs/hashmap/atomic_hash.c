@@ -30,6 +30,10 @@
 // solved comparison of integer with different signedness
 
 // Added `static` keyword to all `inline`d functions (https://stackoverflow.com/a/54875926)
+
+// Moved `include`s of hash headers to top of file
+
+// Replace `__asm__("pause")` w/ `usleep(1)` + `#include <unistd.h>`
 // $$ OWN ADDITIONS $$
 
 #include <stdio.h>
@@ -40,8 +44,23 @@
 #include <math.h>
 #include <sys/time.h>
 #include <sched.h>
+#include <unistd.h>
 
 #include "atomic_hash.h"
+
+
+#if defined (MPQ3HASH)
+    # include "hash_functions/hash_mpq.h"
+#elif defined (NEWHASH)
+    # include "hash_functions/hash_newhash.h"
+#elif defined (MD5HASH)
+    # include "hash_functions/hash_md5.h"
+#elif defined (MURMUR3HASH_128)
+    # include "hash_functions/hash_murmur3.h"
+#elif defined (CITY3HASH_128)
+# include "hash_functions/hash_city.h"
+#endif
+
 
 
 #if defined (MPQ3HASH) || defined (NEWHASH)
@@ -74,7 +93,7 @@
             while ((hv).x == 0) { /* wait for unhold */ \
               if ((hv).y == 0) return 0; /* no unhold but released */ \
               if (--__l == 0) { add1 (h->stats.escapes); return 0; } /* give up */ \
-              if (__l & 0x0f) __asm__("pause"); else sched_yield(); /*alt: usleep(1)*/ \
+              if (__l & 0x0f) usleep(1); else sched_yield(); /* original: __asm__("pause") */ \
           }} \
           if ((hv).y != (v).y || (hv).y == 0) { unhold_bucket (hv, v); return 0; } \
           } while (0)
@@ -228,9 +247,7 @@ int init_htab (htab_t * ht, unsigned long num, double ratio) {
     return 0;
 }
 
-hash_t *
-atomic_hash_create (unsigned int max_nodes, int reset_ttl)
-{
+hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     const double collision = COLLISION; /* collision control, larger is better */
     hash_t *h;
     htab_t *ht1, *ht2, *at1;  /* bucket array 1, 2 and collision array */
@@ -249,20 +266,15 @@ atomic_hash_create (unsigned int max_nodes, int reset_ttl)
 
 
 #if defined (MPQ3HASH)
-    # include "hash_functions/hash_mpq.h"
   init_crypt_table (ct);
   h->hash_func = mpq3hash;
 #elif defined (NEWHASH)
-    # include "hash_functions/hash_newhash.h"
   h->hash_func = newhash;
 #elif defined (MD5HASH)
-    # include "hash_functions/hash_md5.h"
   h->hash_func = md5hash;
 #elif defined (MURMUR3HASH_128)
-    # include "hash_functions/hash_murmur3.h"
   h->hash_func = MurmurHash3_x64_128;
 #elif defined (CITY3HASH_128)
-# include "hash_functions/hash_city.h"
     h->hash_func = cityhash_128;
 #endif
     h->on_ttl = default_func_remove_node;
