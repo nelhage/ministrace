@@ -8,7 +8,7 @@
  *
  *   - ARM support, see https://github.com/nearffxx/ministrace/commit/ae5681bbe20d7a67551379206ecfaacbf5caea6a
  */
-#include "trace_ptrace.h"
+#include "arch/trace_ptrace.h"
 #include <sys/wait.h>
 #include <signal.h>
 #include "trace_syscalls.h"
@@ -344,7 +344,7 @@ int wait_for_syscall_or_exit(pid_t pid, int *exit_status) {
             } else if (WIFSIGNALED(status)) {
                 *exit_status = WTERMSIG(status);
             }
-            
+
             return -(wait_tid);
         }
     }

@@ -14,7 +14,7 @@
  *  - `ORIG_RAX` = Value of RAX BEFORE syscall (syscall nr)
  *  - `RAX`      = Return value of syscall
  */
-#ifdef __amd64__
+#if defined(__amd64__)
 #  define REG_SYSCALL_NR orig_rax
 #  define REG_SYSCALL_RTN_VAL rax
 #  define REG_SYSCALL_ARG0 rdi
@@ -33,16 +33,6 @@
 #  define REG_SYSCALL_ARG3 esi
 #  define REG_SYSCALL_ARG4 edi
 #  define REG_SYSCALL_ARG5 ebp
-
-#elif defined(__aarch64__)
-#  define REG_SYSCALL_NR ARM_r7
-#  define REG_SYSCALL_RTN_VAL ARM_r0
-#  define REG_SYSCALL_ARG0 ARM_r0
-#  define REG_SYSCALL_ARG1 ARM_r1
-#  define REG_SYSCALL_ARG2 ARM_r2
-#  define REG_SYSCALL_ARG3 ARM_r3
-#  define REG_SYSCALL_ARG4 ARM_r4
-#  define REG_SYSCALL_ARG5 ARM_r5
 
 #else
 #  error "Unsupported CPU arch"
