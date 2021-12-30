@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 typedef int (*callback)(void *hash_data, void *caller_data);
-typedef int (* hook) (void *hash_data, void *rtn_data);
+typedef int (*hook) (void *hash_data, void *rtn_data);
 
 /* callback function idx */
 #define PLEASE_REMOVE_HASH_NODE    -1
@@ -156,7 +156,7 @@ hash_node->expire: hash node's 'expire' field. If expire == 0, this hash node wi
 */
 
 /* return (int): 0 for successful operation and non-zero for unsuccessful operation */
-hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl);
+hash_t *atomic_hash_create (unsigned int max_nodes, int reset_ttl);
 int atomic_hash_destroy (hash_t *h);
 int atomic_hash_add (hash_t *h, const void *key, int key_len, void *user_data, int init_ttl, hook func_on_dup, void *out);
 int atomic_hash_del (hash_t *h, const void *key, int key_len, hook func_on_del, void *out); //delete all matches

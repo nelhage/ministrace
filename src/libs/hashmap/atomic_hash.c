@@ -30,10 +30,11 @@
  *      - unused variables removed
  *      - uninitialized variables initialized to 0
  *      - solved comparison of integer with different signedness
- *      - Moved `include`s of hash headers to top of file
  *
  *   - Compiler error when no hash function was "selected"
  *   - Replace `__asm__("pause")` w/ `usleep(1)` + `#include <unistd.h>` (for more portable code)
+ *
+ *   - Removed not working hash functions + add support for "selecting" function
  */
 
 #include <stdio.h>
@@ -46,6 +47,8 @@
 #include <sched.h>
 #include <unistd.h>
 
+#include "atomic_hash.h"
+
 
 // #define PRINT_DEBUG_MSGS
 
@@ -54,10 +57,6 @@
 #else
 #  define PRINT_DEBUG_MSG(format, ...) do {} while(0)
 #endif
-
-
-#include "atomic_hash.h"
-
 
 
 #if FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH
@@ -160,7 +159,7 @@ int destroy_mem_pool (mem_pool_t * pmp) {
     return 0;
 }
 
-static inline nid * new_mem_block (mem_pool_t * pmp, volatile cas_t * recv_queue) {
+static inline nid *new_mem_block (mem_pool_t *pmp, volatile cas_t *recv_queue) {
     nid i, m, sz, head = 0;
     memword cas_t n, x, *pn;
     void *p;
@@ -212,7 +211,7 @@ int default_func_remove_node (void *hash_data, void *return_data) {
     return PLEASE_REMOVE_HASH_NODE;
 }
 
-int init_htab (htab_t * ht, unsigned long num, double ratio) {
+int init_htab (htab_t *ht, unsigned long num, double ratio) {
     unsigned long i, nb;
     nb = num * ratio;
     for (i = 134217728; nb > i; i *= 2);
@@ -313,7 +312,7 @@ hash_t *atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     return NULL;
 }
 
-int atomic_hash_stats (hash_t * h, unsigned long escaped_milliseconds) {
+int atomic_hash_stats (hash_t *h, unsigned long escaped_milliseconds) {
     const hstats_t *t = &h->stats;
     const htab_t *ht1 = &h->ht[0], *ht2 = &h->ht[1];
     htab_t *p;
@@ -364,7 +363,7 @@ int atomic_hash_stats (hash_t * h, unsigned long escaped_milliseconds) {
     return 0;
 }
 
-int atomic_hash_destroy (hash_t * h) {
+int atomic_hash_destroy (hash_t *h) {
     unsigned int j;
     if (!h) return -1;
 
@@ -375,7 +374,7 @@ int atomic_hash_destroy (hash_t * h) {
     return 0;
 }
 
-static inline nid new_node (hash_t * h) {
+static inline nid new_node (hash_t *h) {
     memword cas_t n, m;
     while (h->freelist.cas.mi != NNULL || new_mem_block (h->mp, &h->freelist)) {
         n.all = h->freelist.all;
@@ -390,7 +389,7 @@ static inline nid new_node (hash_t * h) {
     return NNULL;
 }
 
-static inline void free_node (hash_t * h, nid mi) {
+static inline void free_node (hash_t *h, nid mi) {
     memword cas_t n, m;
     cas_t *p = (cas_t *) (i2p (h->mp, node_t, mi));
     p->cas.rfn = 0;
@@ -402,7 +401,7 @@ static inline void free_node (hash_t * h, nid mi) {
     } while (!cas (&h->freelist.all, n.all, m.all));
 }
 
-static inline void set_hash_node (node_t * p, hv v, void *data, unsigned long expire) {
+static inline void set_hash_node (node_t *p, hv v, void *data, unsigned long expire) {
     p->v = v;
     p->expire = expire;
     p->data = data;
