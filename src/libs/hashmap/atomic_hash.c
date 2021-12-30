@@ -21,20 +21,20 @@
  *
  */
 
-// $$ OWN ADDITIONS $$
-// added #ifdef DEBUG to some `printf`s to omit debug output in non-debug build
-
-// unused variables removed
-// uninitialized variables initialized to 0
-
-// solved comparison of integer with different signedness
-
-// Added `static` keyword to all `inline`d functions (https://stackoverflow.com/a/54875926)
-
-// Moved `include`s of hash headers to top of file
-
-// Replace `__asm__("pause")` w/ `usleep(1)` + `#include <unistd.h>`
-// $$ OWN ADDITIONS $$
+/*
+ * Changelog:
+ *   - Added `PRINT_DEBUG_MSG` to some `printf`s to omit debug output in non-debug build
+ *   - Added `static` keyword to all `inline`d functions (https://stackoverflow.com/a/54875926)
+ *
+ *   - Fixed compiler warnings:
+ *      - unused variables removed
+ *      - uninitialized variables initialized to 0
+ *      - solved comparison of integer with different signedness
+ *      - Moved `include`s of hash headers to top of file
+ *
+ *   - Compiler error when no hash function was "selected"
+ *   - Replace `__asm__("pause")` w/ `usleep(1)` + `#include <unistd.h>` (for more portable code)
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -46,27 +46,39 @@
 #include <sched.h>
 #include <unistd.h>
 
+
+// #define PRINT_DEBUG_MSGS
+
+#ifdef PRINT_DEBUG_MSGS
+#  define PRINT_DEBUG_MSG(format, ...) printf(format, ##__VA_ARGS__)
+#else
+#  define PRINT_DEBUG_MSG(format, ...) do {} while(0)
+#endif
+
+
 #include "atomic_hash.h"
 
 
 #if defined (MPQ3HASH)
-    # include "hash_functions/hash_mpq.h"
+#  include "hash_functions/hash_mpq.h"
 #elif defined (NEWHASH)
-    # include "hash_functions/hash_newhash.h"
+#  include "hash_functions/hash_newhash.h"
 #elif defined (MD5HASH)
-    # include "hash_functions/hash_md5.h"
+#  include "hash_functions/hash_md5.h"
 #elif defined (MURMUR3HASH_128)
-    # include "hash_functions/hash_murmur3.h"
+#  include "hash_functions/hash_murmur3.h"
 #elif defined (CITY3HASH_128)
-# include "hash_functions/hash_city.h"
+#  include "hash_functions/hash_city.h"
+#else
+#  error "atomic_hash: No hash function selected!"
 #endif
 
 
 
 #if defined (MPQ3HASH) || defined (NEWHASH)
-# define NKEY 3
+#  define NKEY 3
 #elif defined (CITY3HASH_128) || defined (MURMUR3HASH_128) || defined (MD5HASH)
-# define NKEY 4
+#  define NKEY 4
 #endif
 
 #define NMHT 2
@@ -117,11 +129,8 @@ mem_pool_t *create_mem_pool (unsigned int max_nodes, unsigned int node_size) {
         pwr2_max_nodes = 32;
 
     for (pwr2_node_size = 0; (1u << pwr2_node_size) < node_size; pwr2_node_size++);
-    if ((1u << pwr2_node_size) != node_size || pwr2_node_size < 5 || pwr2_node_size > 12)
-    {
-#ifdef DEBUG
-        printf("node_size should be N powe of 2, 5 <= N <= 12(4KB page)");
-#endif
+    if ((1u << pwr2_node_size) != node_size || pwr2_node_size < 5 || pwr2_node_size > 12) {
+        MAP_DEBUG_LOG("node_size should be N powe of 2, 5 <= N <= 12(4KB page)");
         return NULL;
     }
 
@@ -143,8 +152,7 @@ mem_pool_t *create_mem_pool (unsigned int max_nodes, unsigned int node_size) {
     pmp->mask = (nid) ((1 << pmp->shift) - 1);
     pmp->curr_blocks = 0;
 
-    if (!posix_memalign ((void **) (&pmp->ba), 64, pmp->max_blocks * sizeof (*pmp->ba)))
-    {
+    if (!posix_memalign ((void **) (&pmp->ba), 64, pmp->max_blocks * sizeof (*pmp->ba))) {
         memset (pmp->ba, 0, pmp->max_blocks * sizeof (*pmp->ba));
         return pmp;
     }
@@ -158,8 +166,7 @@ int destroy_mem_pool (mem_pool_t * pmp) {
     if (!pmp)
         return -1;
     for (i = 0; i < pmp->max_blocks; i++)
-        if (pmp->ba[i])
-        {
+        if (pmp->ba[i]) {
             free (pmp->ba[i]);
             pmp->ba[i] = NULL;
             pmp->curr_blocks--;
@@ -178,13 +185,11 @@ static inline nid * new_mem_block (mem_pool_t * pmp, volatile cas_t * recv_queue
     if (!pmp || !(p = calloc (pmp->blk_node_num, pmp->node_size)))
         return NULL;
     for (i = pmp->curr_blocks; i < pmp->max_blocks; i++)
-        if (cas (&pmp->ba[i], NULL, p))
-        {
+        if (cas (&pmp->ba[i], NULL, p)) {
             atomic_add1 (pmp->curr_blocks);
             break;
         }
-    if (i == pmp->max_blocks)
-    {
+    if (i == pmp->max_blocks) {
         free (p);
         return NULL;
     }
@@ -197,13 +202,11 @@ static inline nid * new_mem_block (mem_pool_t * pmp, volatile cas_t * recv_queue
     pn->cas.mi = NNULL;
     pn->cas.rfn = 0;
     x.cas.mi = head;
-    do
-    {
+    do {
         n.all = recv_queue->all;
         pn->cas.mi = n.cas.mi;
         x.cas.rfn = n.cas.rfn + 1;
-    }
-    while (!cas (&recv_queue->all, n.all, x.all));
+    } while (!cas (&recv_queue->all, n.all, x.all));
     return (nid *) ((char *)p + m * sz);
 }
 
@@ -237,13 +240,10 @@ int init_htab (htab_t * ht, unsigned long num, double ratio) {
         return -1;
     for (i = 0; i < ht->nb; i++)
         ht->b[i] = NNULL;
-#ifdef DEBUG
-    double r;
-    r = (ht->n == 0 ? ratio : ht->nb * 1.0 / ht->n);
-    printf ("expected nb[%ld] = n[%ld] * r[%f]\n", (unsigned long) (num * ratio),
+    PRINT_DEBUG_MSG("expected nb[%ld] = n[%ld] * r[%f]\n", (unsigned long) (num * ratio),
             num, ratio);
-    printf ("actual   nb[%ld] = n[%ld] * r[%f]\n", ht->nb, ht->n, r);
-#endif
+    PRINT_DEBUG_MSG("actual   nb[%ld] = n[%ld] * r[%f]\n", ht->nb, ht->n,
+            (ht->n == 0 ? ratio : ht->nb * 1.0 / ht->n));
     return 0;
 }
 
@@ -253,11 +253,8 @@ hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     htab_t *ht1, *ht2, *at1;  /* bucket array 1, 2 and collision array */
     double K, r1, r2;
     unsigned long j, n1, n2;
-    if (max_nodes < 2 || max_nodes > MAXTAB)
-    {
-#ifdef DEBUG
-        printf ("max_nodes range: 2 ~ %ld\n", (unsigned long) MAXTAB);
-#endif
+    if (max_nodes < 2 || max_nodes > MAXTAB) {
+        PRINT_DEBUG_MSG("max_nodes range: 2 ~ %ld\n", (unsigned long) MAXTAB);
         return NULL;
     }
     if (posix_memalign ((void **) (&h), 64, sizeof (*h)))
@@ -276,6 +273,8 @@ hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
   h->hash_func = MurmurHash3_x64_128;
 #elif defined (CITY3HASH_128)
     h->hash_func = cityhash_128;
+#else
+#  error "atomic_hash: No hash function selected!"
 #endif
     h->on_ttl = default_func_remove_node;
     h->on_del = default_func_remove_node;
@@ -297,36 +296,28 @@ hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
  * nb1 = n1 * r1, r1 = ((n1+2)/tuning/K^2)^(K^2 - 1)
  * nb2 = n2 * r2 == nb1 / K == ((n2+2)/tuning/K))^(K - 1)
 */
-#ifdef DEBUG
-    printf ("init bucket array 1:\n");
-#endif
+    PRINT_DEBUG_MSG("init bucket array 1:\n");
     K = h->npos + 1;
     n1 = max_nodes;
     r1 = pow ((n1 * collision / (K * K)), (1.0 / (K * K - 1)));
     if (init_htab (ht1, n1, r1) < 0)
         goto calloc_exit;
 
-#ifdef DEBUG
-    printf ("init bucket array 2:\n");
-#endif
+    PRINT_DEBUG_MSG("init bucket array 2:\n");
     n2 = (n1 + 2.0) / (K * pow (r1, K - 1));
     r2 = pow (((n2 + 2.0) * collision / K), 1.0 / (K - 1));
     if (init_htab (ht2, n2, r2) < 0)
         goto calloc_exit;
 
-#ifdef DEBUG
-    printf ("init collision array:\n");
-#endif
+    PRINT_DEBUG_MSG("init collision array:\n");
     if (init_htab (at1, 0, collision) < 0)
         goto calloc_exit;
 
     h->mp = create_mem_pool (max_nodes, sizeof (node_t));
 //  h->mp = old_create_mem_pool (ht1->nb + ht2->nb + at1->nb, sizeof (node_t), max_blocks);
-#ifdef DEBUG
-    printf ("shift=%d; mask=%d\n", h->mp->shift, h->mp->mask);
-    printf ("mem_blocks:\t%d/%d, %dx%d bytes, %d bytes per block\n", h->mp->curr_blocks, h->mp->max_blocks,
+    PRINT_DEBUG_MSG("shift=%d; mask=%d\n", h->mp->shift, h->mp->mask);
+    PRINT_DEBUG_MSG("mem_blocks:\t%d/%d, %dx%d bytes, %d bytes per block\n", h->mp->curr_blocks, h->mp->max_blocks,
             h->mp->blk_node_num, h->mp->node_size, h->mp->blk_size);
-#endif
     if (!h->mp)
         goto calloc_exit;
 
@@ -354,10 +345,8 @@ int atomic_hash_stats (hash_t * h, unsigned long escaped_milliseconds) {
     char *b = "    ";
     blk_in_kB = m->blk_size / d;
     mem = m->curr_blocks * blk_in_kB;
-#ifdef DEBUG
-    printf ("mem=%.2f, blk_in_kB=%.2f, curr_block=%u, blk_nod_num=%u, node_size=%u\n",
+    printf("mem=%.2f, blk_in_kB=%.2f, curr_block=%u, blk_nod_num=%u, node_size=%u\n",
             mem, blk_in_kB, m->curr_blocks, m->blk_node_num, m->node_size);
-#endif
     printf ("\n");
     printf ("mem_blocks:\t%u/%u, %ux%u bytes, %.2f MB per block\n", m->curr_blocks, m->max_blocks,
             m->blk_node_num, m->node_size, m->blk_size/1048576.0);
@@ -410,8 +399,7 @@ int atomic_hash_destroy (hash_t * h) {
 
 static inline nid new_node (hash_t * h) {
     memword cas_t n, m;
-    while (h->freelist.cas.mi != NNULL || new_mem_block (h->mp, &h->freelist))
-    {
+    while (h->freelist.cas.mi != NNULL || new_mem_block (h->mp, &h->freelist)) {
         n.all = h->freelist.all;
         if (n.cas.mi == NNULL)
             continue;
@@ -429,13 +417,11 @@ static inline void free_node (hash_t * h, nid mi) {
     cas_t *p = (cas_t *) (i2p (h->mp, node_t, mi));
     p->cas.rfn = 0;
     m.cas.mi = mi;
-    do
-    {
+    do {
         n.all = h->freelist.all;
         m.cas.rfn = n.cas.rfn + 1;
         p->cas.mi = n.cas.mi;
-    }
-    while (!cas (&h->freelist.all, n.all, m.all));
+    } while (!cas (&h->freelist.all, n.all, m.all));
 }
 
 static inline void set_hash_node (node_t * p, hv v, void *data, unsigned long expire) {
@@ -451,14 +437,12 @@ static inline int likely_equal (hv w, hv v) {
 /* only called in atomic_hash_get */
 static inline int try_get (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn) {
     hold_bucket_otherwise_return_0 (p->v, v);
-    if (*seat != mi)
-    {
+    if (*seat != mi) {
         unhold_bucket (p->v, v);
         return 0;
     }
     int result = cbf ? cbf (p->data, rtn) : h->on_get (p->data, rtn);
-    if (result == PLEASE_REMOVE_HASH_NODE)
-    {
+    if (result == PLEASE_REMOVE_HASH_NODE) {
         if (cas (seat, mi, NNULL))
             atomic_sub1 (h->ht[idx].ncur);
         memset (p, 0, sizeof (*p));
@@ -478,14 +462,12 @@ static inline int try_get (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int id
 /* only called in atomic_hash_add */
 static inline int try_dup (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn) {
     hold_bucket_otherwise_return_0 (p->v, v);
-    if (*seat != mi)
-    {
+    if (*seat != mi) {
         unhold_bucket (p->v, v);
         return 0;
     }
     int result = cbf ? cbf (p->data, rtn) : h->on_dup (p->data, rtn);
-    if (result == PLEASE_REMOVE_HASH_NODE)
-    {
+    if (result == PLEASE_REMOVE_HASH_NODE) {
         if (cas (seat, mi, NNULL))
             atomic_sub1 (h->ht[idx].ncur);
         memset (p, 0, sizeof (*p));
@@ -506,15 +488,13 @@ static inline int try_dup (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int id
 static inline int try_add (hash_t *h, node_t *p, nid *seat, nid mi, int idx, void *rtn) {
     hvu x = p->v.x;
     p->v.x = 0;
-    if (!cas (seat, NNULL, mi))
-    {
+    if (!cas (seat, NNULL, mi)) {
         p->v.x = x;
         return 0; /* other thread wins, caller to retry other seats */
     }
     atomic_add1 (h->ht[idx].ncur);
     int result = h->on_add (p->data, rtn);
-    if (result == PLEASE_REMOVE_HASH_NODE)
-    {
+    if (result == PLEASE_REMOVE_HASH_NODE) {
         if (cas (seat, mi, NNULL))
             atomic_sub1 (h->ht[idx].ncur);
         memset (p, 0, sizeof (*p));
@@ -533,8 +513,7 @@ static inline int try_add (hash_t *h, node_t *p, nid *seat, nid mi, int idx, voi
 /* only called in atomic_hash_del */
 static inline int try_del (hash_t *h, hv v, node_t *p, nid *seat, nid mi, int idx,  hook cbf, void *rtn) {
     hold_bucket_otherwise_return_0 (p->v, v);
-    if (*seat != mi || !cas (seat, mi, NNULL))
-    {
+    if (*seat != mi || !cas (seat, mi, NNULL)) {
         unhold_bucket (p->v, v);
         return 0;
     }
@@ -562,14 +541,12 @@ static inline int valid_ttl (hash_t *h, unsigned long now, node_t *p, nid *seat,
         return 1;
     hold_bucket_otherwise_return_0 (p->v, v);
     /* re-enter valid state, skip to call try_action */
-    if (p->expire == 0 || p->expire > now)
-    {
+    if (p->expire == 0 || p->expire > now) {
         unhold_bucket (p->v, v);
         return 1;
     }
     /* expired,  now remove it */
-    if (*seat != mi || !cas (seat, mi, NNULL))
-    {
+    if (*seat != mi || !cas (seat, mi, NNULL)) {
         /* failed to remove. let others do it in the future, skip and go next pos */
         unhold_bucket (p->v, v);
         return 0;
