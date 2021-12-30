@@ -59,25 +59,10 @@
 #include "atomic_hash.h"
 
 
-#if defined (MPQ3HASH)
-#  include "hash_functions/hash_mpq.h"
-#elif defined (NEWHASH)
-#  include "hash_functions/hash_newhash.h"
-#elif defined (MD5HASH)
-#  include "hash_functions/hash_md5.h"
-#elif defined (MURMUR3HASH_128)
-#  include "hash_functions/hash_murmur3.h"
-#elif defined (CITY3HASH_128)
-#  include "hash_functions/hash_city.h"
-#else
-#  error "atomic_hash: No hash function selected!"
-#endif
 
-
-
-#if defined (MPQ3HASH) || defined (NEWHASH)
+#if FUNCTION == MPQ3HASH || FUNCTION == NEWHASH
 #  define NKEY 3
-#elif defined (CITY3HASH_128) || defined (MURMUR3HASH_128) || defined (MD5HASH)
+#elif FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH || FUNCTION == MURMUR3HASH_128
 #  define NKEY 4
 #endif
 
@@ -247,7 +232,7 @@ int init_htab (htab_t * ht, unsigned long num, double ratio) {
     return 0;
 }
 
-hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
+hash_t *atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     const double collision = COLLISION; /* collision control, larger is better */
     hash_t *h;
     htab_t *ht1, *ht2, *at1;  /* bucket array 1, 2 and collision array */
@@ -262,19 +247,25 @@ hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     memset (h, 0, sizeof (*h));
 
 
-#if defined (MPQ3HASH)
+#if FUNCTION == MPQ3HASH
+#  include "hash_functions/hash_mpq.h"
+  uint32_t ct[0x500];
   init_crypt_table (ct);
   h->hash_func = mpq3hash;
-#elif defined (NEWHASH)
+#elif FUNCTION == NEWHASH
+#  include "hash_functions/hash_newhash.h"
   h->hash_func = newhash;
-#elif defined (MD5HASH)
+#elif FUNCTION == MD5HASH
+#  include "hash_functions/hash_md5.h"
   h->hash_func = md5hash;
-#elif defined (MURMUR3HASH_128)
+#elif FUNCTION == MURMUR3HASH_128
+#  include "hash_functions/hash_murmur3.h"
   h->hash_func = MurmurHash3_x64_128;
-#elif defined (CITY3HASH_128)
+#elif FUNCTION == CITY3HASH_128
+#  include "hash_functions/hash_city.h"
     h->hash_func = cityhash_128;
 #else
-#  error "atomic_hash: No hash function selected!"
+#  error "atomic_hash: No hash function has been selected!"
 #endif
     h->on_ttl = default_func_remove_node;
     h->on_del = default_func_remove_node;

@@ -1,7 +1,7 @@
-﻿/* 
+﻿/*
  *  atomic_hash.h
  *
- * 2012-2015 Copyright (c) 
+ * 2012-2015 Copyright (c)
  * Fred Huang, <divfor@gmail.com>
  * All rights reserved.
  *
@@ -36,19 +36,19 @@ typedef int (* hook) (void *hash_data, void *rtn_data);
 #define PLEASE_SET_TTL_TO(n)       (n)
 
 
-/* --- Hash function to be used --- */
-//#define MD5HASH
-//#define MURMUR3HASH_128
-#define CITY3HASH_128
-//#define NEWHASH
-//#define MPQ3HASH
+/* -- Avaiable hash functions -- */
+#define CITY3HASH_128 1
+#define MD5HASH 2
+#define MPQ3HASH 3
+#define NEWHASH 4
+#define MURMUR3HASH_128 5
 
 
-#if defined(MPQ3HASH) || defined (NEWHASH)
+#if FUNCTION == MPQ3HASH || FUNCTION == NEWHASH
 #define NCMP 3
 typedef uint32_t hvu;
 typedef struct hv { hvu x, y, z; } hv_t;
-#elif defined (CITY3HASH_128) || defined (MURMUR3HASH_128) || defined (MD5HASH)
+#elif FUNCTION == CITY3HASH_128 || FUNCTION == MURMUR3HASH_128 || FUNCTION == MD5HASH
 #define NCMP 2
 typedef uint64_t hvu;
 typedef struct hv { hvu x, y; } hv;

@@ -11,7 +11,6 @@ enable_language(C)
 
 # -- Options --
 option(WITH_TESTS "Build tests" ON)
-
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
 
 
@@ -24,8 +23,7 @@ add_compile_options(
         -Wswitch-enum -Wswitch-default -Werror -frecord-gcc-switches)
 
 set(OPTIONS
-    -D_GNU_SOURCE
-)
+    -D_GNU_SOURCE)
 
 
 add_subdirectory(src)
