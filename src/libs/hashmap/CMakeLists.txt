@@ -14,8 +14,7 @@ set(MAP_COMPILE_OPTIONS
         -fPIC)
 
 set(MAP_LINK_LIBS
-        m
-        pthread)
+        m)
 
 
 # IMPORTANT: Must match macros in `atomic_hash.h`
