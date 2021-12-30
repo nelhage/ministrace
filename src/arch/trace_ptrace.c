@@ -20,12 +20,6 @@ long __get_reg_content(pid_t pid, size_t off_user_struct) {
     return reg_val;
 }
 
-
-/*
- * ELUCIDATION:
- *   Syscall args (up to 6) are passed on
- *      amd64 in rdi, rsi, rdx, r10, r8, and r9
- */
 long get_syscall_arg(pid_t pid, int which) {
     switch (which) {
         case 0: return get_reg_content(pid, REG_SYSCALL_ARG0);
@@ -40,6 +34,7 @@ long get_syscall_arg(pid_t pid, int which) {
 }
 
 
+/* - Helpers - */
 char *read_string(pid_t pid, unsigned long addr) {
     char *read_str;
     size_t read_str_size_bytes = 2048;

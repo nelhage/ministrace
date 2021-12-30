@@ -12,7 +12,7 @@
 /*
  * ELUCIDATION:
  *  - The ABI specifies the calling convention used for syscalls
- *    -> Calling conventions for every architecture are described
+ *    -> Those  conventions are described for every architecture
  *       in the `syscall(2)` man page
  *  - `orig_` prefix: Refers to initial value in register (on
  *      syscall enter)
@@ -52,6 +52,8 @@ long __get_reg_content(pid_t pid, size_t off_user_struct);
 #define get_reg_content(pid, reg_name) __get_reg_content(pid, offsetof(struct user, regs.reg_name))
 
 long get_syscall_arg(pid_t pid, int which);
+
+
 char *read_string(pid_t pid, unsigned long addr);
 
 

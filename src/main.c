@@ -6,7 +6,7 @@
  *
  *   - Do we need PTRACE_DETATCH when using `-p` (i.e., `PTRACE_ATTACH`) option ??
  *
- *   - ARM support, see https://github.com/nearffxx/ministrace/commit/ae5681bbe20d7a67551379206ecfaacbf5caea6a
+ *   - ARM64 support
  */
 #include "arch/trace_ptrace.h"
 #include <sys/wait.h>
