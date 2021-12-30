@@ -130,7 +130,7 @@ mem_pool_t *create_mem_pool (unsigned int max_nodes, unsigned int node_size) {
 
     for (pwr2_node_size = 0; (1u << pwr2_node_size) < node_size; pwr2_node_size++);
     if ((1u << pwr2_node_size) != node_size || pwr2_node_size < 5 || pwr2_node_size > 12) {
-        MAP_DEBUG_LOG("node_size should be N powe of 2, 5 <= N <= 12(4KB page)");
+        PRINT_DEBUG_MSG("node_size should be N powe of 2, 5 <= N <= 12(4KB page)");
         return NULL;
     }
 
@@ -240,9 +240,9 @@ int init_htab (htab_t * ht, unsigned long num, double ratio) {
         return -1;
     for (i = 0; i < ht->nb; i++)
         ht->b[i] = NNULL;
-    PRINT_DEBUG_MSG("expected nb[%ld] = n[%ld] * r[%f]\n", (unsigned long) (num * ratio),
+    PRINT_DEBUG_MSG("expected nb[%lu] = n[%lu] * r[%f]\n", (unsigned long) (num * ratio),
             num, ratio);
-    PRINT_DEBUG_MSG("actual   nb[%ld] = n[%ld] * r[%f]\n", ht->nb, ht->n,
+    PRINT_DEBUG_MSG("actual   nb[%lu] = n[%lu] * r[%f]\n", ht->nb, ht->n,
             (ht->n == 0 ? ratio : ht->nb * 1.0 / ht->n));
     return 0;
 }
@@ -254,7 +254,7 @@ hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     double K, r1, r2;
     unsigned long j, n1, n2;
     if (max_nodes < 2 || max_nodes > MAXTAB) {
-        PRINT_DEBUG_MSG("max_nodes range: 2 ~ %ld\n", (unsigned long) MAXTAB);
+        PRINT_DEBUG_MSG("max_nodes range: 2 ~ %lu\n", (unsigned long) MAXTAB);
         return NULL;
     }
     if (posix_memalign ((void **) (&h), 64, sizeof (*h)))
@@ -315,8 +315,8 @@ hash_t * atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
 
     h->mp = create_mem_pool (max_nodes, sizeof (node_t));
 //  h->mp = old_create_mem_pool (ht1->nb + ht2->nb + at1->nb, sizeof (node_t), max_blocks);
-    PRINT_DEBUG_MSG("shift=%d; mask=%d\n", h->mp->shift, h->mp->mask);
-    PRINT_DEBUG_MSG("mem_blocks:\t%d/%d, %dx%d bytes, %d bytes per block\n", h->mp->curr_blocks, h->mp->max_blocks,
+    PRINT_DEBUG_MSG("shift=%u; mask=%u\n", h->mp->shift, h->mp->mask);
+    PRINT_DEBUG_MSG("mem_blocks:\t%u/%u, %ux%u bytes, %u bytes per block\n", h->mp->curr_blocks, h->mp->max_blocks,
             h->mp->blk_node_num, h->mp->node_size, h->mp->blk_size);
     if (!h->mp)
         goto calloc_exit;
