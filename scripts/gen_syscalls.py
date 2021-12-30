@@ -3,7 +3,7 @@
 '''
 Generates header file containing information for syscalls
 
-TODOs: - Improve parsing for ARM (`Some syscalls have missing args`)
+TODOs: - Improve parsing for ARM (`Some syscalls have missing args`; overview: https://thog.github.io/syscalls-table-aarch64/latest.html)
        - Add exceptions for args which should be pointers (but are of type unsigned long ?), e.g., `mmap`, `mprotect`. ... ??
        - Return values of are always treated as int (e.g., `mmap`)
 '''
