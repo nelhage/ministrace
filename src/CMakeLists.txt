@@ -1,11 +1,14 @@
 
 set(SOURCE
-        trace/internal/ptrace.h
-        trace/internal/ptrace.c
+        trace/internal/ptrace_arch.h
+        trace/internal/ptrace_fcts.h
+        trace/internal/ptrace_fcts.c
         trace/internal/syscalls.h
         trace/internal/syscalls.c
         trace/internal/tmap.h
         trace/internal/tmap.c
+        trace/tracing.h
+        trace/tracing.c
         cli.h
         cli.c
         main.c)

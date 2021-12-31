@@ -1,3 +1,7 @@
+/**
+ * Functions which make use of `syscallents` type
+ *   May also make use of "ptrace_fcts"
+ */
 #ifndef TRACE_SYSCALLS_H
 #define TRACE_SYSCALLS_H
 
@@ -7,5 +11,7 @@
 /* -- Function prototypes -- */
 const char *get_syscall_name(long syscall_nr);
 void print_syscall_args(pid_t pid, long syscall_nr);
+
+void print_syscalls(void);
 
 #endif /* TRACE_SYSCALLS_H */

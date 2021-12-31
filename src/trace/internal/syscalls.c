@@ -3,7 +3,7 @@
 #include "syscall_types.h"
 #include "generated/syscallents.h"
 
-#include "ptrace.h"
+#include "ptrace_fcts.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 
 
 /* -- Function prototypes -- */
-void _fprint_str_esc(FILE* restrict stream, char* str);
+static void _fprint_str_esc(FILE* restrict stream, char* str);
 
 
 /* -- Functions -- */
@@ -24,7 +24,7 @@ const char *get_syscall_name(long syscall_nr) {
         }
     }
 
-    static char fallback_generic_syscall_name[128];
+    static char fallback_generic_syscall_name[128];     // Warning: Not thread-safe
     snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
     return fallback_generic_syscall_name;
 }
@@ -64,11 +64,22 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
 }
 
 
+/* - Misc. - */
+void print_syscalls(void) {
+    for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
+        const syscall_entry* const scall = &syscalls[i];
+        if (NULL != scall->name) {
+            printf("\t%d: %s\n", i, scall->name);
+        }
+    }
+}
+
+
 /* - Helper functions - */
 /*
  * Prints ASCII control chars in `str` using a hex representation
  */
-void _fprint_str_esc(FILE *stream, char *str) {
+static void _fprint_str_esc(FILE *stream, char *str) {
     setlocale(LC_ALL, "C");
 
     for (int i = 0; '\0' != str[i]; i++) {
@@ -77,17 +88,6 @@ void _fprint_str_esc(FILE *stream, char *str) {
             fputc(c, stream);
         } else {
             fprintf(stream, "\\x%02x", (unsigned char)c);
-        }
-    }
-}
-
-
-/* -- Misc. -- */
-void print_syscalls(void) {
-    for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
-        const syscall_entry* const scall = &syscalls[i];
-        if (NULL != scall->name) {
-            printf("\t%d: %s\n", i, scall->name);
         }
     }
 }

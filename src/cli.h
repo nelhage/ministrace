@@ -1,3 +1,6 @@
+/**
+ * CLI args parsing
+ */
 #ifndef CLI_H
 #define CLI_H
 

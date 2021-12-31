@@ -1,8 +1,10 @@
-#include "ptrace.h"
+#include "ptrace_fcts.h"
 
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include "ptrace_arch.h"
 
 #include "../../common/error.h"
 
