@@ -4,6 +4,17 @@
 #ifndef PTRACE_ARCH_H
 #define PTRACE_ARCH_H
 
+/*
+ * ELUCIDATION:
+ *  - The ABI specifies the calling convention used for syscalls
+ *    -> Those  conventions are described for every architecture
+ *       in the `syscall(2)` man page
+ *  - `orig_` prefix: Refers to initial value in register (on
+ *      syscall enter)
+ *    Used when register is used to hold the ...
+ *      - syscall nr (on syscall enter) AND
+ *      - return value (on syscall exit)
+ */
 #if defined(__amd64__)
 #  define REG_SYSCALL_NR orig_rax
 #  define REG_SYSCALL_RTN_VAL rax

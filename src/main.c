@@ -4,9 +4,13 @@
  *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
  *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap`)
  *
- *   - Do we need PTRACE_DETATCH when using `-p` (i.e., `PTRACE_ATTACH`) option ??
+ *   - Do we need PTRACE_DETATCH when using `-p` (i.e., `PTRACE_ATTACH`) option like strace does ??
  *
  *   - ARM64 support
+ *
+ *  ISSUES:
+ *    - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs -> uid issue ??)
+ *      Console: [1]  + 48133 suspended (signal)  wireshark
  */
 #include <unistd.h>
 #include <stdlib.h>
