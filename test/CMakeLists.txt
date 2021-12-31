@@ -1,8 +1,7 @@
-# Ensure debug info and assert functions are build during compile of tests
-set(CMAKE_BUILD_TYPE Debug)
+
+set(CMAKE_BUILD_TYPE Debug)     # Ensure debug info and assert functions are build during compile of tests
 
 
-# -- Ultimate test program --
 if (WITH_TESTS)
     # - Component tests -
     add_executable(tmap_test

@@ -14,7 +14,7 @@ enable_language(C)
 
 # set(CMAKE_C_COMPILER clang)
 
-# -- Options --
+# -- CMake options --
 option(WITH_TESTS "Build tests" ON)
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
 

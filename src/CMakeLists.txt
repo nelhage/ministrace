@@ -11,7 +11,7 @@ set(SOURCE
         main.c)
 
 
-# -- Generate syscalls --
+# -- Parse syscalls + generate source --
 set(GEN_SYSCALLS_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/gen_syscalls.py")
 set(GEN_SYSCALLS_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 

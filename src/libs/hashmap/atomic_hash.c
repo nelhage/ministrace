@@ -51,8 +51,8 @@
 #include "atomic_hash.h"
 
 
+/* - Debugging macros - */
 // #define PRINT_DEBUG_MSGS
-
 #ifdef PRINT_DEBUG_MSGS
 #  define PRINT_DEBUG_MSG(format, ...) printf(format, ##__VA_ARGS__)
 #else

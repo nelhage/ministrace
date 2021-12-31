@@ -3,16 +3,16 @@
 #include <stdbool.h>
 
 #include "tmap.h"
-#include <atomic_hash.h>
+#include <atomic_hash.h>      // TODO: Revise (should be `include`able via <hashmap/atomic_hash.h>)
 #include "../../common/error.h"
 
 
-/* - Constants - */
+/* -- Constants -- */
 #define TTL_DISABLE 0
 
 
-/* - Macros - */
-/* - Debugging stuff - */
+/* -- Macros -- */
+/* - Debugging - */
 // #define DEBUG_TMAP          // KEEP IN MIND: Requires also Debug build
 #ifdef DEBUG_TMAP
 #  define LOG_DEBUG_TMAP(FORMAT, ...) LOG_DEBUG(FORMAT, ##__VA_ARGS__)
@@ -21,7 +21,7 @@
 #endif
 
 
-/* - Globals - */
+/* -- Globals -- */
 static hash_t* global_map = NULL;
 
 
