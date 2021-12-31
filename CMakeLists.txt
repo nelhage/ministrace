@@ -1,6 +1,11 @@
 project(ministrace)
 
 
+# -- CMake Debugging options --
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+# set(CMAKE_DEBUG_TARGET_PROPERTIES INCLUDE_DIRECTORIES)
+
+
 # -- Project settings --
 cmake_minimum_required(VERSION 3.3.2)
 set(CMAKE_C_STANDARD 99)

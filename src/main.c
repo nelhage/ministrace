@@ -8,10 +8,10 @@
  *
  *   - ARM64 support
  */
-#include "arch/trace_ptrace.h"
+#include "trace/internal/ptrace.h"
 #include <sys/wait.h>
 #include <signal.h>
-#include "trace_syscalls.h"
+#include "trace/internal/syscalls.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -21,9 +21,9 @@
 #include <stdbool.h>
 
 #include "cli.h"
-#include "error.h"
+#include "common/error.h"
 
-#include "trace_tmap.h"
+#include "trace/internal/tmap.h"
 
 /* -- Global consts -- */
 #define DEFAULT_TMAP_MAX_SIZE 5000

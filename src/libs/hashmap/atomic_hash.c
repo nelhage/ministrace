@@ -35,13 +35,14 @@
  *   - Replace `__asm__("pause")` w/ `usleep(1)` + `#include <unistd.h>` (for more portable code)
  *
  *   - Removed not working hash functions + add support for "selecting" function
+ *
+ *   - Opaque data type
  */
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <ctype.h>
 #include <math.h>
 #include <sys/time.h>
 #include <sched.h>
@@ -57,6 +58,82 @@
 #else
 #  define PRINT_DEBUG_MSG(format, ...) do {} while(0)
 #endif
+
+
+
+/* -- Available hash functions -- */
+#define CITY3HASH_128 1
+#define MD5HASH       2
+
+
+#if FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH
+#define NCMP 2
+typedef uint64_t hvu;
+typedef struct { hvu x, y; } hv;
+#endif
+
+#define shared __attribute__((aligned(64)))
+
+typedef uint32_t nid;
+typedef struct {
+    unsigned long expires;
+    unsigned long escapes;
+    unsigned long add_nomem;
+    unsigned long add_nosit;
+    unsigned long del_nohit;
+    unsigned long get_nohit;
+    unsigned long mem_htabs;
+    unsigned long mem_nodes;
+    unsigned long max_nodes;
+    unsigned long key_collided;
+} hstats_t;
+
+// typedef struct {
+//     unsigned long xadd, xget, xdel, nexp;
+// } hc_t; /* 64-bytes cache line */
+
+typedef struct {
+    void **ba;
+    shared nid mask, shift; /* used for i2p() only */
+    shared nid max_blocks, blk_node_num, node_size, blk_size;
+    volatile nid curr_blocks;
+} mem_pool_t;
+
+typedef union {
+    struct { nid mi, rfn; } cas;
+    uint64_t all;
+} cas_t;
+
+typedef struct {
+    volatile hv v;
+    unsigned long expire; /* expire in ms # of gettimeofday(), 0 = never */
+    void *data;
+} node_t;
+
+typedef struct {
+    nid *b;             /* hash tab (int arrary as memory index */
+    unsigned long ncur, n, nb;  /* nb: buckets #, set by n * r */
+    unsigned long nadd, ndup, nget, ndel;
+} htab_t;
+
+struct hash_t {
+/* hash function, here select cityhash_128 as default */
+    shared void (* hash_func) (const void *key, size_t len, void *r);
+
+/* hook func to deal with user data in safe zone */
+    shared hook on_ttl, on_add, on_dup, on_get, on_del;
+    shared volatile cas_t freelist; /* free hash node list */
+    shared htab_t ht[3]; /* ht[2] for array [MINTAB] */
+    shared hstats_t stats;
+    shared void **hp;
+    shared mem_pool_t *mp;
+    shared unsigned long reset_expire; /* if > 0, reset node->expire */
+    shared unsigned long nmht, ncmp;
+    shared unsigned long nkey, npos, nseat; /* nseat = 2*npos = 4*nkey */
+    shared void *teststr;
+    shared unsigned long testidx, teststr_num;
+};
+
 
 
 #if FUNCTION == CITY3HASH_128 || FUNCTION == MD5HASH
@@ -112,7 +189,7 @@ mem_pool_t *create_mem_pool (unsigned int max_nodes, unsigned int node_size) {
 
     for (pwr2_node_size = 0; (1u << pwr2_node_size) < node_size; pwr2_node_size++);
     if ((1u << pwr2_node_size) != node_size || pwr2_node_size < 5 || pwr2_node_size > 12) {
-        PRINT_DEBUG_MSG("node_size should be N powe of 2, 5 <= N <= 12(4KB page)");
+        PRINT_DEBUG_MSG("node_size should be N power of 2, 5 <= N <= 12(4KB page)");
         return NULL;
     }
 
@@ -311,6 +388,30 @@ hash_t *atomic_hash_create (unsigned int max_nodes, int reset_ttl) {
     free (h);
     return NULL;
 }
+
+hash_t *atomic_hash_create_with_hooks(unsigned int max_nodes, int reset_ttl,
+                                      hook on_ttl, hook on_add, hook on_dup, hook on_get, hook on_del) {
+    hash_t *map = atomic_hash_create(max_nodes, reset_ttl);
+
+    if (on_ttl) {
+        map->on_ttl = on_ttl;
+    }
+    if (on_add) {
+        map->on_add = on_add;
+    }
+    if (on_dup) {
+        map->on_dup = on_dup;
+    }
+    if (on_get) {
+        map->on_get = on_get;
+    }
+    if (on_del) {
+        map->on_del = on_del;
+    }
+
+    return map;
+}
+
 
 int atomic_hash_stats (hash_t *h, unsigned long escaped_milliseconds) {
     const hstats_t *t = &h->stats;

@@ -1,8 +1,7 @@
-#ifndef SYSCALLS_H
-#define SYSCALLS_H
+#ifndef SYSCALL_TYPES_H
+#define SYSCALL_TYPES_H
 
 #define SYSCALL_MAX_ARGS 6
-
 
 /* -- Types -- */
 typedef enum {
@@ -15,6 +14,7 @@ typedef struct {
     const char* const name;
     const int nargs;
     const arg_type args[SYSCALL_MAX_ARGS];
-} sys_call;        // NOTE: `syscall` is already used
+} syscall_entry;
 
-#endif /* SYSCALLS_H */
+
+#endif /* SYSCALL_TYPES_H */

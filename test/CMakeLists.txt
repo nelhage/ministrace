@@ -6,7 +6,7 @@ set(CMAKE_BUILD_TYPE Debug)
 if (WITH_TESTS)
     # - Component tests -
     add_executable(tmap_test
-            ../src/trace_tmap.c
+            ../src/trace/internal/tmap.c
             tmap_test.c)
     target_link_libraries(tmap_test hashmap)
 

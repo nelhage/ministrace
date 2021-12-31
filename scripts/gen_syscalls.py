@@ -40,7 +40,7 @@ LINUX_SRC_PARSING_ARCH_SPECIFIC = {
 
 
 # - Existing src -
-GENERATED_HEADER_INCLUDE_TYPES_HEADER = "syscall_types.h"
+GENERATED_HEADER_INCLUDE_TYPES_HEADER = "trace/internal/syscall_types.h"
 
 class GENERATED_HEADER_STRUCT_ARG_TYPE_ENUM:
     INT = "ARG_INT"
@@ -51,11 +51,11 @@ GENERATED_HEADER_STRUCT_ARG_ARRAY_MAX_SIZE = 6
 
 
 # - Generated source -
-GENERATED_HEADER_SYSCALL_STRUCT_NAME = "sys_call"
+GENERATED_HEADER_SYSCALL_STRUCT_NAME = "syscall_entry"
 GENERATED_HEADER_SYSCALL_ARRAY_NAME = "syscalls"
 
 GENERATED_SRC_FILES_DEFAULT_OUTPUT_DIR = "."
-GENERATED_SRC_FILENAME = '__syscalls'
+GENERATED_SRC_FILENAME = 'syscallents'
 
 
 
@@ -164,6 +164,7 @@ def generate_src_files(kernel_version: str, cpu_arch: str,
                              arch_compat_abi: str,
                              target_dir: str, src_filename: str,
                              syscalls_parsed_from_tbl: dict, syscalls_parsed_from_scr: dict) -> None:
+    print(f"Writing parsed syscalls to {os.path.abspath(target_dir)}")
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'COMPAT_' if abi == arch_compat_abi else ''}{name}"
     generated_file_disclaimer = f"/*\n * Generated file (for kernel version {kernel_version} on {cpu_arch}). Do not edit manually or check into VCS.\n *\n */"
@@ -241,9 +242,8 @@ def parse_syscall_arg_type(arg_str: str) -> GENERATED_HEADER_STRUCT_ARG_TYPE_ENU
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
 
 
-
 def main(args):
-    if not args:
+    if not args or len(args) > 2:
         print("Usage: %s /path/to/linux_src_dir [target-dir]" % (sys.argv[0],), file=sys.stderr)
         return 1
 

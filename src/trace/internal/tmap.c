@@ -2,20 +2,19 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "trace_tmap.h"
-#include "libs/hashmap/atomic_hash.h"
-#include "error.h"
+#include "tmap.h"
+#include <atomic_hash.h>
+#include "../../common/error.h"
 
 
 /* - Constants - */
 #define TTL_DISABLE 0
 
 
-#define NDEBUG_TMAP
-
 /* - Macros - */
 /* - Debugging stuff - */
-#ifndef NDEBUG_TMAP
+// #define DEBUG_TMAP          // KEEP IN MIND: Requires also Debug build
+#ifdef DEBUG_TMAP
 #  define LOG_DEBUG_TMAP(FORMAT, ...) LOG_DEBUG(FORMAT, ##__VA_ARGS__)
 #else
 #  define LOG_DEBUG_TMAP(FORMAT, ...) do { } while(0)
@@ -32,7 +31,7 @@ static hash_t* global_map = NULL;
 /* Hook is necessary for destroying map (and removing values) */
 int __del_hook(void *hash_data, void *caller_data __attribute__((unused))) {
     if (hash_data) {
-        LOG_DEBUG_TMAP("Freeing child `s_nr` %ld", *((long*)hash_data));    // DEBUGGING; TODO: print tid
+        LOG_DEBUG_TMAP("Freeing child `syscall_nr` %ld", *((long*)hash_data));    // DEBUGGING; TODO: print tid
         free(hash_data);
     }
 
@@ -41,18 +40,14 @@ int __del_hook(void *hash_data, void *caller_data __attribute__((unused))) {
 
 
 /* - Public functions - */
-/**
- * Shall be called by `init_process` in event.c
- */
 void tmap_create(const size_t max_size) {
     if (global_map) {
         LOG_ERROR_AND_EXIT("tmap has been already init'ed");
     }
 
-    if (!(global_map = atomic_hash_create(max_size, TTL_DISABLE))) {
+    if (!(global_map = atomic_hash_create_with_hooks(max_size, TTL_DISABLE,
+                                        NULL, NULL, NULL, NULL, __del_hook))) {
         LOG_ERROR_AND_EXIT("Couldn't init tmap");
-    } else {
-        global_map->on_del = __del_hook;
     }
 }
 

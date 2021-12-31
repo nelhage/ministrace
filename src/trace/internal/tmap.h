@@ -1,6 +1,8 @@
 /**
- * (Linux kernel) tasks map (tmap)
- *   Implements abstraction (API) for map implementation (which is used for tracking the syscall state of tasks)
+ * (Linux kernel) Tasks map (tmap)
+ *   Implements abstraction (API) for map implementation
+ *   (which is used for tracking the syscall state
+ *   (syscall-enter / syscall-exit) of tasks of all tasks)
  */
 #ifndef TMAP_H
 #define TMAP_H

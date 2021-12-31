@@ -1,10 +1,10 @@
-#include "trace_ptrace.h"
+#include "ptrace.h"
 
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include "error.h"
+#include "../../common/error.h"
 
 
 long __get_reg_content(pid_t pid, size_t off_user_struct) {
@@ -20,6 +20,8 @@ long __get_reg_content(pid_t pid, size_t off_user_struct) {
     return reg_val;
 }
 
+
+/* - Helpers - */
 long get_syscall_arg(pid_t pid, int which) {
     switch (which) {
         case 0: return get_reg_content(pid, REG_SYSCALL_ARG0);
@@ -29,12 +31,10 @@ long get_syscall_arg(pid_t pid, int which) {
         case 4: return get_reg_content(pid, REG_SYSCALL_ARG4);
         case 5: return get_reg_content(pid, REG_SYSCALL_ARG5);
 
-        default: return -1L;
+        default: return -1L;        /* Invalid */
     }
 }
 
-
-/* - Helpers - */
 char *read_string(pid_t pid, unsigned long addr) {
     char *read_str;
     size_t read_str_size_bytes = 2048;

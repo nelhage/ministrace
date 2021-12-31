@@ -9,7 +9,7 @@
 
 #include <assert.h>
 
-#include "../src/trace_tmap.h"
+#include "../src/trace/internal/tmap.h"
 
 
 /* -- Constants -- */
