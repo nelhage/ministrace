@@ -8,9 +8,10 @@
  *
  *   - ARM64 support
  *
- *  ISSUES:
+ *  KNOWN ISSUES:
  *    - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs -> uid issue ??)
  *      Console: [1]  + 48133 suspended (signal)  wireshark
+ *    - Running `firefox` w/ follow flag crashes (./src/ministrace -f firefox)
  */
 #include <unistd.h>
 #include <stdlib.h>
