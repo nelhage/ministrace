@@ -1,22 +1,15 @@
 project(ministrace)
 
 
-# -- CMake Debugging options --
-# set(CMAKE_VERBOSE_MAKEFILE ON)
-# set(CMAKE_DEBUG_TARGET_PROPERTIES INCLUDE_DIRECTORIES)
-
-
 # -- Project settings --
 cmake_minimum_required(VERSION 3.3.2)
 set(CMAKE_C_STANDARD 99)
+# set(CMAKE_C_COMPILER clang)
 enable_language(C)
 
-
-# set(CMAKE_C_COMPILER clang)
-
-# -- CMake options --
-option(WITH_TESTS "Build tests" ON)
-set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
+# - CMake Debugging options -
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+# set(CMAKE_DEBUG_TARGET_PROPERTIES INCLUDE_DIRECTORIES)
 
 
 # -- Preprocessor / Compile options --
@@ -27,9 +20,7 @@ add_compile_options(
         -Wstrict-prototypes -Wundef -Wunused-macros
         -Wswitch-enum -Wswitch-default -Werror -frecord-gcc-switches)
 
-set(OPTIONS
-    -D_GNU_SOURCE)
 
-
+# -- "Subdirs" containing projects --
 add_subdirectory(src)
 add_subdirectory(test)

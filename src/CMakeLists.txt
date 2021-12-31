@@ -1,4 +1,5 @@
 
+# -- Variables --
 set(SOURCE
         trace/internal/ptrace_arch.h
         trace/internal/ptrace_fcts.h
@@ -13,30 +14,44 @@ set(SOURCE
         cli.c
         main.c)
 
+set(COMPILE_OPTIONS "")
 
-# -- Parse syscalls + generate source --
+
+# -- CMake options --
+set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
+option(PRINT_STRINGS "Print string instead of pointer (e.g., in read syscall); Disabling this option improves stability / performance" OFF)
+
+if (PRINT_STRINGS)
+    list(APPEND COMPILE_OPTIONS "-DPRINT_STRINGS")
+endif()
+
+
+# -- Build targets/commands --
+# - Parse syscalls + generate source -
 set(GEN_SYSCALLS_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/gen_syscalls.py")
 set(GEN_SYSCALLS_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 find_package(PythonInterp 3.4 REQUIRED)
 add_custom_command(
-    COMMENT "Parse syscalls from kernel source and generate source files"
-    DEPENDS ${GEN_SYSCALLS_SCRIPT}
-    OUTPUT "${GEN_SYSCALLS_TARGET_DIR}/syscallents.c" "${GEN_SYSCALLS_TARGET_DIR}/syscallents.h"
+        COMMENT "Parse syscalls from kernel source and generate source files"
+        DEPENDS ${GEN_SYSCALLS_SCRIPT}
+        OUTPUT "${GEN_SYSCALLS_TARGET_DIR}/syscallents.c" "${GEN_SYSCALLS_TARGET_DIR}/syscallents.h"
 
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${GEN_SYSCALLS_TARGET_DIR}
-    COMMAND ${PYTHON_EXECUTABLE} ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR} ${GEN_SYSCALLS_TARGET_DIR})
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${GEN_SYSCALLS_TARGET_DIR}
+        COMMAND ${PYTHON_EXECUTABLE} ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR} ${GEN_SYSCALLS_TARGET_DIR})
 
 list(APPEND SOURCE
         ${GEN_SYSCALLS_TARGET_DIR}/syscallents.h
         ${GEN_SYSCALLS_TARGET_DIR}/syscallents.c)
 
 
-
-# -- Build --
+# -- Project --
 add_subdirectory(libs/hashmap)
 
 add_executable(ministrace ${SOURCE})
+
+target_compile_options(ministrace PRIVATE
+        ${COMPILE_OPTIONS})
 
 target_link_libraries(ministrace PRIVATE
         hashmap)

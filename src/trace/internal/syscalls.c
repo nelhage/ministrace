@@ -12,7 +12,9 @@
 
 
 /* -- Function prototypes -- */
+#ifdef PRINT_STRINGS
 static void _fprint_str_esc(FILE* restrict stream, char* str);
+#endif /* PRINT_STRINGS */
 
 
 /* -- Functions -- */
@@ -45,6 +47,7 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
             case ARG_INT:
                 fprintf(stderr, "%ld", arg);
                 break;
+#ifdef PRINT_STRINGS
             case ARG_STR: {
                 char* strval = read_string(pid, arg);
 
@@ -54,6 +57,7 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
                 free(strval);
                 break;
             }
+#endif /* PRINT_STRINGS */
             default:    /* e.g., ARG_PTR */
                 fprintf(stderr, "0x%lx", (unsigned long)arg);
                 break;
@@ -76,6 +80,7 @@ void print_syscalls(void) {
 
 
 /* - Helper functions - */
+#ifdef PRINT_STRINGS
 /*
  * Prints ASCII control chars in `str` using a hex representation
  */
@@ -91,3 +96,4 @@ static void _fprint_str_esc(FILE *stream, char *str) {
         }
     }
 }
+#endif /* PRINT_STRINGS */

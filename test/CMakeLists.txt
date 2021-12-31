@@ -2,7 +2,12 @@
 set(CMAKE_BUILD_TYPE Debug)     # Ensure debug info and assert functions are build during compile of tests
 
 
+# -- CMake options --
+option(WITH_TESTS "Build tests" ON)
+
+
 if (WITH_TESTS)
+    # -- Project(s) --
     # - Component tests -
     add_executable(tmap_test
             ../src/trace/internal/tmap.c
