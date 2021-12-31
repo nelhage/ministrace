@@ -14,23 +14,32 @@ detail how it works.
 
 [1]: http://blog.nelhage.com/2010/08/write-yourself-an-strace-in-70-lines-of-code/
 
-### 1.1. Version history 
+### 1.1. Version history
 * v2: Adds support for &mldr;
   * tracing multi-threaded programs
   * attaching to already running processes
 
 
 ## 2. Compile
-* Prerequisites:
-  * Installed Linux kernel sources
-    * Steps for Ubuntu:
-      * Add apt-sources: Software & Updates &rarr; Ubuntu Software &rarr; Tick checkbox "Source Code"
-      * Install sources: `sudo apt-get source linux`
-* Out-of-source build:
-  1. `mkdir build && cd build`
-  2. `ccmake -DCMAKE_BUILD_TYPE=Release ..` &rarr; press `c` &rarr; set `LINUX_SRC_DIR` &rarr; press `c` &rarr; press `g`
-  3. `cmake --build .`
-      * Executable will be in `build/src`
+### 2.1. Prerequisites
+* Downloaded Linux kernel sources (required for parsing syscalls)
+  * Steps for Ubuntu:
+    * Add apt-sources: Software & Updates &rarr; Ubuntu Software &rarr; Tick checkbox "Source Code" (or uncomment corresponding `#deb-src` in `/etc/apt/sources.list`)
+    * Install sources (e.g., in `/usr/src`): `sudo apt source linux`
+* Installed cmake + ccmake (ccmake is optional):
+  * On Ubuntu: `sudo snap install cmake --classic` + `sudo apt install -y cmake-curses-gui`
+
+### 2.2. Requirements based on chosen cmake options
+* Option `FUNCTION`:
+  * `CITY3HASH_128`: CPU must support SSE4.2
+  * `MD5HASH`: Installed `libssl-dev` (`sudo apt install -y libssl-dev`)
+
+### 2.3. Out-of-source build
+1. `mkdir build && cd build`
+2. `ccmake -DCMAKE_BUILD_TYPE=Release ..` &rarr; press `c` &rarr; set `LINUX_SRC_DIR` (to downloaded Linux kernel sources) &rarr; press `c` &rarr; press `g`
+3. `cmake --build .`
+    * Executable will be in `build/src`
+
 
 ## 3. Basic Usage
 ```ministrace [--pause-snr <syscall nr>|--pause-sname <syscall name>] <program> [<args> ...]```
