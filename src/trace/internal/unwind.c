@@ -2,11 +2,12 @@
 #include <libunwind-ptrace.h>
 #include <libiberty/demangle.h>								/* or g++ header `cxxabi.h` using `abi::__cxa_demangle` */
 
-#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "unwind.h"
+
+#include "../../common/error.h"
 
 
 void print_backtrace_of_tracee(pid_t pid) {
@@ -28,7 +29,9 @@ void print_backtrace_of_tracee(pid_t pid) {
      *   - `context` void-pointer tells the address space exactly what entity should be unwound
      */
     unw_cursor_t cursor;
-    assert (!unw_init_remote(&cursor, as, context));
+    if (0 > unw_init_remote(&cursor, as, context)) {
+        LOG_ERROR_AND_EXIT("Init failed");
+    }
 
 
     do {
@@ -36,7 +39,9 @@ void print_backtrace_of_tracee(pid_t pid) {
         /*
          * Read the value of register `reg` in stackframe identified by `cursor` and store its value in the word pointed to by `pc`
          */
-        assert (!unw_get_reg(&cursor, UNW_REG_IP, &pc));
+        if (0 > unw_get_reg(&cursor, UNW_REG_IP, &pc)) {
+            LOG_ERROR_AND_EXIT("Reading IP failed");
+        }
 
         fprintf(stderr, "0x%lx: ", pc);
 
@@ -49,7 +54,6 @@ void print_backtrace_of_tracee(pid_t pid) {
          */
         if (!unw_get_proc_name(&cursor, symbol_buf, sizeof(symbol_buf), &offset)) {
             char *symbol = symbol_buf;
-            int status;
      	    if (!(symbol = cplus_demangle(symbol_buf, 0))) {
       	        symbol = symbol_buf;
     	    }

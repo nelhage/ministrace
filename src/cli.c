@@ -83,6 +83,12 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
 
+#ifdef WITH_STACK_UNWINDING
+        case 'k':
+            arguments->print_stack_traces = true;
+            break;
+#endif /* WITH_STACK_UNWINDING */
+
         case ARGP_KEY_ARG:
           /* Too many arguments */
           break;
@@ -111,6 +117,9 @@ void parse_cli_args(int argc, char** argv,
         {"follow-forks", 'f', NULL, 0, "Follow `fork`ed child processes", 2},
         {"pause-snr", 'n', "nr", 0, "Pause on specified syscall nr", 3},
         {"pause-sname", 'a', "name", 0, "Pause on specified syscall name", 3},
+#ifdef WITH_STACK_UNWINDING
+            {"stack-traces", 'k', NULL, 0, "Print the execution stack trace of the traced processes after each system call", 4},
+#endif /* WITH_STACK_UNWINDING */
         {0}
     };
 
@@ -118,8 +127,11 @@ void parse_cli_args(int argc, char** argv,
     parsed_cli_args_ptr->list_syscalls = false;
     parsed_cli_args_ptr->attach_to_process = -1;
     parsed_cli_args_ptr->follow_fork = false;
+#ifdef WITH_STACK_UNWINDING
+    parsed_cli_args_ptr->print_stack_traces = false;
+#endif /* WITH_STACK_UNWINDING */
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
-        parsed_cli_args_ptr->exec_arg_offset = 0;
+    parsed_cli_args_ptr->exec_arg_offset = 0;
 
     static const struct argp argp = {
         cli_options, parse_cli_opt,

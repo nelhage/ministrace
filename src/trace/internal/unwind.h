@@ -1,3 +1,6 @@
+/**
+ * Used for unwinding stack
+ */
 #ifndef UNWIND_H
 #define UNWIND_H
 

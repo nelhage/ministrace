@@ -33,6 +33,8 @@ detail how it works.
 * Option `FUNCTION`:
   * `CITY3HASH_128`: CPU must support SSE4.2
   * `MD5HASH`: Installed `libssl-dev` (`sudo apt install -y libssl-dev`)
+* Option `WITH_STACK_UNWINDING`: Installed `libunwind-dev` + `libiberty-dev` (`sudo apt install -y libunwind-dev libiberty-dev`)
+
 
 ### 2.3. Out-of-source build
 1. `mkdir build && cd build`

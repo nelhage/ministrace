@@ -14,15 +14,30 @@ set(SOURCE
         cli.c
         main.c)
 
-set(COMPILE_OPTIONS "")
+set(COMPILE_OPTIONS
+        "")
+
+set(LINK_OPTIONS
+        "hashmap")
 
 
 # -- CMake options --
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
 option(PRINT_STRINGS "Print string instead of pointer (e.g., in read syscall); Disabling this option improves stability / performance" OFF)
+option(WITH_STACK_UNWINDING "Stack unwinding option -k" OFF)
 
 if (PRINT_STRINGS)
     list(APPEND COMPILE_OPTIONS "-DPRINT_STRINGS")
+endif()
+
+if (WITH_STACK_UNWINDING)
+    list(APPEND SOURCE
+            trace/internal/unwind.h
+            trace/internal/unwind.c)
+    list(APPEND COMPILE_OPTIONS "-DWITH_STACK_UNWINDING")
+    list(APPEND LINK_OPTIONS
+            unwind-ptrace unwind-generic
+            iberty)
 endif()
 
 
@@ -54,7 +69,7 @@ target_compile_options(ministrace PRIVATE
         ${COMPILE_OPTIONS})
 
 target_link_libraries(ministrace PRIVATE
-        hashmap)
+        ${LINK_OPTIONS})
 
 target_include_directories(ministrace PRIVATE
         "${CMAKE_SOURCE_DIR}/src"

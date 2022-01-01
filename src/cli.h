@@ -12,6 +12,9 @@ typedef struct cli_args {
     pid_t attach_to_process;
     bool follow_fork;
     int pause_on_scall_nr;
+#ifdef WITH_STACK_UNWINDING
+    bool print_stack_traces;
+#endif /* WITH_STACK_UNWINDING */
     int exec_arg_offset;
 } cli_args;
 

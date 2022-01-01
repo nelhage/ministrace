@@ -12,6 +12,10 @@
 
 #include "tracing.h"
 
+#ifdef WITH_STACK_UNWINDING
+#include "internal/unwind.h"
+#endif
+
 #include "../common/error.h"
 
 
@@ -54,7 +58,11 @@ int do_tracee(int argc, char **argv) {
 /* -- Tracing -- */
 int do_tracer(const pid_t tracee_pid,
               const bool attach_to_tracee,
-              const int pause_on_syscall_nr, const bool follow_fork) {
+              const int pause_on_syscall_nr, const bool follow_fork
+#ifdef WITH_STACK_UNWINDING
+            , const bool print_stacktrace
+#endif /* WITH_STACK_UNWINDING */
+) {
     /* Disable IO buffering for accurate output */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
@@ -172,6 +180,12 @@ int do_tracer(const pid_t tracee_pid,
                             cur_tid, get_syscall_name(*found_child_s_nr), *found_child_s_nr);
                 }
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
+
+#ifdef WITH_STACK_UNWINDING
+                if (print_stacktrace) {
+                    print_backtrace_of_tracee(cur_tid);
+                }
+#endif /* WITH_STACK_UNWINDING */
 
                 tmap_remove(&cur_tid);
             }
