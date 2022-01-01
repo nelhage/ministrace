@@ -27,7 +27,7 @@ detail how it works.
   * Steps for Ubuntu:
     * Add apt-sources: Software & Updates &rarr; Ubuntu Software &rarr; Tick checkbox "Source Code" (or uncomment corresponding `#deb-src` in `/etc/apt/sources.list`)
     * Install sources (e.g., in `/usr/src`): `sudo apt source linux`
-* Installed cmake + ccmake (ccmake is optional):
+* Installed cmake + ccmake (Note: ccmake is optional):
   * On Ubuntu: `sudo snap install cmake --classic` + `sudo apt install -y cmake-curses-gui`
 
 ### 2.2. Requirements based on chosen cmake options
@@ -38,6 +38,10 @@ detail how it works.
 
 
 ### 2.3. Out-of-source build
+0. Add git submodules
+    * `git rm --cached ext/atomic_hash`
+    * `rm -rf ext/cunit`
+    * `git submodule add https://github.com/therealthingy/ministrace.git ext/atomic_hash`
 1. `mkdir build && cd build`
 2. `ccmake -DCMAKE_BUILD_TYPE=Release ..` &rarr; press `c` &rarr; set `LINUX_SRC_DIR` (to downloaded Linux kernel sources) &rarr; press `c` &rarr; press `g`
 3. `cmake --build .`
