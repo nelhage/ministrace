@@ -18,6 +18,7 @@ detail how it works.
 * v2: Adds support for &mldr;
   * tracing multi-threaded programs
   * attaching to already running processes
+  * stack unwinding
 
 
 ## 2. Compile
