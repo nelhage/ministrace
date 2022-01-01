@@ -18,7 +18,7 @@ set(COMPILE_OPTIONS
         "")
 
 set(LINK_OPTIONS
-        "hashmap")
+        "atomic_hash_object")
 
 
 # -- CMake options --
@@ -61,8 +61,6 @@ list(APPEND SOURCE
 
 
 # -- Project --
-add_subdirectory(libs/hashmap)
-
 add_executable(ministrace ${SOURCE})
 
 target_compile_options(ministrace PRIVATE
@@ -74,4 +72,4 @@ target_link_libraries(ministrace PRIVATE
 target_include_directories(ministrace PRIVATE
         "${CMAKE_SOURCE_DIR}/src"
         "${ministrace_BINARY_DIR}/src"
-         $<TARGET_PROPERTY:hashmap,INTERFACE_INCLUDE_DIRECTORIES>)
+         $<TARGET_PROPERTY:atomic_hash_object,INTERFACE_INCLUDE_DIRECTORIES>)

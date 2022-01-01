@@ -1,0 +1,3 @@
+[submodule "ext/atomic_hash"]
+	path = ext/atomic_hash
+	url = https://github.com/therealthingy/atomic_hash.git

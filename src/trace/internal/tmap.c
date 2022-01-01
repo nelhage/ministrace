@@ -45,9 +45,10 @@ void tmap_create(const size_t max_size) {
         LOG_ERROR_AND_EXIT("tmap has been already init'ed");
     }
 
-    if (!(global_map = atomic_hash_create_with_hooks(max_size, TTL_DISABLE,
-                                        NULL, NULL, NULL, NULL, __del_hook))) {
+    if (!(global_map = atomic_hash_create(max_size, TTL_DISABLE)) {
         LOG_ERROR_AND_EXIT("Couldn't init tmap");
+    } else {
+        atomic_hash_register_hooks(NULL, NULL, NULL, NULL, __del_hook);
     }
 }
 
