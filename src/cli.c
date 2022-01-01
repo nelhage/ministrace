@@ -86,6 +86,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 #ifdef WITH_STACK_UNWINDING
         case 'k':
             arguments->print_stack_traces = true;
+            arguments->exec_arg_offset++;
             break;
 #endif /* WITH_STACK_UNWINDING */
 
