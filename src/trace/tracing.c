@@ -31,7 +31,6 @@ int wait_for_syscall_or_exit(pid_t pid, int *exit_status);
 void wait_for_user_input(void);
 
 const char *get_syscall_name_with_fallback(long syscall_nr);
-void print_syscall_nr_and_args(pid_t tid, long syscall_nr);
 
 
 
@@ -166,7 +165,9 @@ int do_tracer(const pid_t tracee_pid,
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
                 }
-                print_syscall_nr_and_args(cur_tid, syscall_nr);
+                fprintf(stderr, "%s(", get_syscall_name_with_fallback(syscall_nr));
+                print_syscall_args(cur_tid, syscall_nr);
+                fprintf(stderr, ")");
 
                 /* Stop (i.e., single step) if requested */
                 if (syscall_nr == pause_on_syscall_nr) {
@@ -212,12 +213,6 @@ const char *get_syscall_name_with_fallback(long syscall_nr) {
         snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
         return fallback_generic_syscall_name;
     }
-}
-
-void print_syscall_nr_and_args(pid_t tid, long syscall_nr) {
-    fprintf(stderr, "%s(", get_syscall_name_with_fallback(syscall_nr));
-    print_syscall_args(tid, syscall_nr);
-    fprintf(stderr, ")");
 }
 
 void wait_for_user_input(void) {
