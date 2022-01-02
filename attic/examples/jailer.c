@@ -15,16 +15,9 @@
 #include <time.h>
 #include <unistd.h>
 
-// #include <sys/resource.h>
-
-
-#ifdef __x86_64__
-#  include <sys/user.h>
-#endif
 
 
 #define NO_SYSCALL (-1)
-
 
 // ------------------------------------------- Arch specific stuff -------------------------------------------
 #ifdef __aarch64__
@@ -41,7 +34,8 @@ struct user_regs_struct_full {
 	int syscallno;
 };
 #else
-#define user_regs_struct_full user_regs_struct
+#  include <sys/user.h>
+#  define user_regs_struct_full user_regs_struct
 #endif
 
 
