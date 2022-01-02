@@ -1,14 +1,13 @@
+#include <stdio.h>
+#include <string.h>
+#include <locale.h>
+
 #include "syscalls.h"
 
 #include "syscall_types.h"
 #include "generated/syscallents.h"
 
 #include "ptrace_fcts.h"
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <locale.h>
 
 
 /* -- Function prototypes -- */
@@ -19,16 +18,25 @@ static void _fprint_str_esc(FILE* restrict stream, char* str);
 
 /* -- Functions -- */
 const char *get_syscall_name(long syscall_nr) {
-    if (syscall_nr <= MAX_SYSCALL_NUM) {
+    if (syscall_nr >= 0 && syscall_nr <= MAX_SYSCALL_NUM) {
         const syscall_entry* const scall = &syscalls[syscall_nr];
-        if (scall->name) {
+        if (scall->name) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
             return scall->name;
         }
     }
 
-    static char fallback_generic_syscall_name[128];     // Warning: Not thread-safe
-    snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
-    return fallback_generic_syscall_name;
+    return NULL;
+}
+
+long get_syscall_nr(char* syscall_name) {
+    for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
+        const syscall_entry* const scall = &syscalls[i];
+        if (scall->name && !strcmp(syscall_name, scall->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
+            return i;
+        }
+    }
+
+    return -1L;
 }
 
 

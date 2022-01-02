@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include "cli.h"
-#include "generated/syscallents.h"
+#include "trace/internal/syscalls.h"
 
 
 /* -- Functions -- */
@@ -33,15 +33,18 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
     cli_args *arguments = state->input;
 
     switch(key) {
+    /* List syscalls and exit */
         case 'l':
             arguments->list_syscalls = true;
             break;
 
+    /* Follow `clone`'s */
         case 'f':
             arguments->follow_fork = true;
             arguments->exec_arg_offset++;
             break;
 
+    /* Pause on specified syscall (passed as number) */
         case 'n':
             {
                 long parsed_syscall_nr = -1;
@@ -49,8 +52,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                     argp_usage(state);
                 }
 
-                if ((parsed_syscall_nr > MAX_SYSCALL_NUM || parsed_syscall_nr < 0) ||
-                    NULL == syscalls[parsed_syscall_nr].name) {
+                if (!get_syscall_name(parsed_syscall_nr)) {
                     argp_usage(state);
                 }
                 arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
@@ -58,20 +60,20 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
 
+    /* Pause on specified syscall (passed as name) */
         case 'a':
             {
-                for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
-                    const syscall_entry* const scall = &syscalls[i];
-                    if (NULL != scall->name && !strcmp(arg, scall->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
-                        arguments->pause_on_scall_nr = i;
-                        arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
-                        return 0;
-                    }
+                long syscall_nr = -1;
+                if (0 <= (syscall_nr = get_syscall_nr(arg))) {
+                    arguments->pause_on_scall_nr = syscall_nr;
+                    arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+                    return 0;
                 }
                 argp_usage(state);
             }
             break;
 
+    /* Attach to already running process w/ corresponding pid */
         case 'p':
             {
                 long parsed_attach_pid = -1;
@@ -84,6 +86,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             break;
 
 #ifdef WITH_STACK_UNWINDING
+        /* Print stack when printing syscall */
         case 'k':
             arguments->print_stack_traces = true;
             arguments->exec_arg_offset++;

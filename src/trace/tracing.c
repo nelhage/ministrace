@@ -25,11 +25,15 @@
 #define PTRACE_TRAP_INDICATOR_BIT (1 << 7)
 
 
+/* -- Function prototypes -- */
 int wait_for_syscall_or_exit(pid_t pid, int *exit_status);
 
 void wait_for_user_input(void);
 
+const char *get_syscall_name_with_fallback(long syscall_nr);
 void print_syscall(pid_t pid, long syscall_nr);
+
+
 
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
 int do_tracee(int argc, char **argv) {
@@ -58,7 +62,7 @@ int do_tracee(int argc, char **argv) {
 /* -- Tracing -- */
 int do_tracer(const pid_t tracee_pid,
               const bool attach_to_tracee,
-              const int pause_on_syscall_nr, const bool follow_fork
+              const long pause_on_syscall_nr, const bool follow_fork
 #ifdef WITH_STACK_UNWINDING
             , const bool print_stacktrace
 #endif /* WITH_STACK_UNWINDING */
@@ -177,7 +181,7 @@ int do_tracer(const pid_t tracee_pid,
 
                 if (follow_fork) {
                     fprintf(stderr, "\n... [%d - %s (%ld)]",
-                            cur_tid, get_syscall_name(*found_child_s_nr), *found_child_s_nr);
+                            cur_tid, get_syscall_name_with_fallback(*found_child_s_nr), *found_child_s_nr);
                 }
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
@@ -197,8 +201,21 @@ int do_tracer(const pid_t tracee_pid,
     return exit_status;
 }
 
+const char *get_syscall_name_with_fallback(long syscall_nr) {
+    const char *scall_name = NULL;
+    if ((scall_name = get_syscall_name(syscall_nr))) {
+        return scall_name;
+
+    } else {
+        LOG_WARN("Unknown syscall w/ nr %ld", syscall_nr);
+        static char fallback_generic_syscall_name[128];     // Warning: Not thread-safe
+        snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
+        return fallback_generic_syscall_name;
+    }
+}
+
 void print_syscall(pid_t pid, long syscall_nr) {
-    fprintf(stderr, "%s(", get_syscall_name(syscall_nr));
+    fprintf(stderr, "%s(", get_syscall_name_with_fallback(syscall_nr));
     print_syscall_args(pid, syscall_nr);
     fprintf(stderr, ")");
 }

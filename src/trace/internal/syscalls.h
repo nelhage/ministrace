@@ -10,8 +10,9 @@
 
 /* -- Function prototypes -- */
 const char *get_syscall_name(long syscall_nr);
-void print_syscall_args(pid_t pid, long syscall_nr);
+long get_syscall_nr(char* syscall_name);
 
+void print_syscall_args(pid_t pid, long syscall_nr);
 void print_syscalls(void);
 
 #endif /* TRACE_SYSCALLS_H */
