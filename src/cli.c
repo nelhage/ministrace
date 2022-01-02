@@ -81,7 +81,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                     argp_usage(state);
                 }
 
-                arguments->attach_to_process = (int)parsed_attach_pid;
+                arguments->attach_to_process = (pid_t)parsed_attach_pid;
             }
             break;
 
@@ -122,7 +122,7 @@ void parse_cli_args(int argc, char** argv,
         {"pause-snr", 'n', "nr", 0, "Pause on specified syscall nr", 3},
         {"pause-sname", 'a', "name", 0, "Pause on specified syscall name", 3},
 #ifdef WITH_STACK_UNWINDING
-            {"stack-traces", 'k', NULL, 0, "Print the execution stack trace of the traced processes after each system call", 4},
+        {"stack-traces", 'k', NULL, 0, "Print the execution stack trace of the traced processes after each system call", 4},
 #endif /* WITH_STACK_UNWINDING */
         {0}
     };

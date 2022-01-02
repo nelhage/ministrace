@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
 /* Option 1: Print supported syscalls */
     if (parsed_cli_args.list_syscalls) {
-        print_syscalls();
+        print_all_supported_syscalls();
         return 0;
 
 /* Option 2a: Attach to existing process */

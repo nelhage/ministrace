@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #include "tmap.h"
-#include <atomic_hash.h>      // TODO: Revise (should be `include`able via <hashmap/atomic_hash.h>)
+#include <atomic_hash.h>      // TODO: Revise (should be `include`able via <atomic_hash/atomic_hash.h>)
 #include "../../common/error.h"
 
 
@@ -13,7 +13,7 @@
 
 /* -- Macros -- */
 /* - Debugging - */
-// #define DEBUG_TMAP          // KEEP IN MIND: Requires also Debug build
+// #define DEBUG_TMAP          /* KEEP IN MIND: Requires also Debug build */
 #ifdef DEBUG_TMAP
 #  define LOG_DEBUG_TMAP(FORMAT, ...) LOG_DEBUG(FORMAT, ##__VA_ARGS__)
 #else

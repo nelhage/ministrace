@@ -75,19 +75,6 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
     }
 }
 
-
-/* - Misc. - */
-void print_syscalls(void) {
-    for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
-        const syscall_entry* const scall = &syscalls[i];
-        if (NULL != scall->name) {
-            printf("\t%d: %s\n", i, scall->name);
-        }
-    }
-}
-
-
-/* - Helper functions - */
 #ifdef PRINT_STRINGS
 /*
  * Prints ASCII control chars in `str` using a hex representation
@@ -105,3 +92,14 @@ static void _fprint_str_esc(FILE *stream, char *str) {
     }
 }
 #endif /* PRINT_STRINGS */
+
+
+/* - Misc. - */
+void print_all_supported_syscalls(void) {
+    for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
+        const syscall_entry* const scall = &syscalls[i];
+        if (NULL != scall->name) {
+            printf("\t%d: %s\n", i, scall->name);
+        }
+    }
+}
