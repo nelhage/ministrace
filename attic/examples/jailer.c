@@ -1,22 +1,27 @@
 // Source: https://gist.github.com/SBell6hf/77393dac37939a467caf8b241dc1676b
 // License: The Unlicense
 
-#include <elf.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/procfs.h>
 #include <sys/ptrace.h>
-#include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
-#include <sys/user.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+
+// #include <sys/resource.h>
+// #include <sys/user.h>
+
+
+#ifdef __x86_64__
+#  include <elf.h>
+#  include <sys/procfs.h>
+#endif
 
 
 #define NO_SYSCALL (-1)
