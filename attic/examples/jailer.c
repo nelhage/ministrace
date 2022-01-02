@@ -1,6 +1,7 @@
 // Source: https://gist.github.com/SBell6hf/77393dac37939a467caf8b241dc1676b
 // License: The Unlicense
 
+#include <elf.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 
 
 #ifdef __x86_64__
-#  include <elf.h>
 #  include <sys/user.h>
 #endif
 
