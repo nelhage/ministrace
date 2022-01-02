@@ -11,16 +11,16 @@
 
 
 
-long ptrace_get_syscall_nr(pid_t pid) {
+long ptrace_get_syscall_nr(pid_t tid) {
     struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(pid, &regs);
+    __ptrace_get_reg_content(tid, &regs);
 
     return SYSCALL_REG_CALLNO(regs);
 }
 
-long ptrace_get_syscall_arg(pid_t pid, int which) {
+long ptrace_get_syscall_arg(pid_t tid, int which) {
     struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(pid, &regs);
+    __ptrace_get_reg_content(tid, &regs);
 
     switch (which) {
         case 0: return SYSCALL_REG_ARG0(regs);
@@ -34,16 +34,23 @@ long ptrace_get_syscall_arg(pid_t pid, int which) {
     }
 }
 
-long ptrace_get_syscall_rtn_value(pid_t pid) {
+long ptrace_get_syscall_rtn_value(pid_t tid) {
     struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(pid, &regs);
+    __ptrace_get_reg_content(tid, &regs);
 
     return SYSCALL_REG_RETURN(regs);
 }
 
+bool ptrace_syscall_has_returned(pid_t tid) {
+    struct user_regs_struct_full regs;
+    __ptrace_get_reg_content(tid, &regs);
+
+    return SYSCALL_RETED(regs);
+}
 
 
-char *ptrace_read_string(pid_t pid, unsigned long addr) {
+
+char *ptrace_read_string(pid_t tid, unsigned long addr) {
     char *read_str;
     size_t read_str_size_bytes = 2048;
 /* Allocate memory as buffer for string to be read */
@@ -62,7 +69,7 @@ char *ptrace_read_string(pid_t pid, unsigned long addr) {
             }
         }
     /* Read from tracee (each time one word) */
-        ptrace_read_word = ptrace(PTRACE_PEEKDATA, pid, addr + read_bytes);
+        ptrace_read_word = ptrace(PTRACE_PEEKDATA, tid, addr + read_bytes);
         if (errno) {
             read_str[read_bytes] = '\0';
             break;

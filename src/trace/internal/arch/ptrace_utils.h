@@ -17,8 +17,6 @@
 #include <sys/user.h>
 
 
-#define NO_SYSCALL (-1)
-
 
 /* ----------------------- -----------------------   arm64    ----------------------- ----------------------- */
 #ifdef __aarch64__
@@ -37,6 +35,8 @@ struct user_regs_struct_full {
 	int syscallno;
 };
 
+#define NO_SYSCALL (-1)
+
 /* - Registers - */
 #  define SYSCALL_REG_CALLNO(regss) ((const int)(regss.syscallno))
 #  define SYSCALL_REG_RETURN(regss) (regss.regs[0])
@@ -46,7 +46,7 @@ struct user_regs_struct_full {
 #  define SYSCALL_REG_ARG3(regss) (regss.regs[3])
 #  define SYSCALL_REG_ARG4(regss) (regss.regs[4])
 #  define SYSCALL_REG_ARG5(regss) (regss.regs[5])
-#  define SYSCALL_RETED(regss) (regss.regs[7] == 1 && SYSCALL_REG_CALLNO(regss) != NO_SYSCALL)     // $$$ $$$ $$$ $$$ $$$  TODO: TEST $$$ $$$ $$$ $$$ $$$
+#  define SYSCALL_RETED(regss) (regss.regs[7] == 1 && SYSCALL_REG_CALLNO(regss) != ((unsigned long long)NO_SYSCALL))
 
 
 /* ----------------------- ----------------------- amd64 / i386 ----------------------- ----------------------- */
@@ -65,7 +65,7 @@ struct user_regs_struct_full {
 #    define SYSCALL_REG_ARG3(regss) (regss.r10)
 #    define SYSCALL_REG_ARG4(regss) (regss.r8)
 #    define SYSCALL_REG_ARG5(regss) (regss.r9)
-#    define SYSCALL_RETED(regss) (regss.rax != -38)     // $$$  TODO: TEST $$$
+#    define SYSCALL_RETED(regss) (regss.rax != ((unsigned long long)-38))     // -38 is ENOSYS which is put into RAX as a default return value by the kernel's syscall entry code --> $$$  TODO: TEST $$$
 #  else /* __i386__ */
 #    define SYSCALL_REG_CALLNO(regss) ((const int)(regss.orig_eax))
 #    define SYSCALL_REG_RETURN(regss) (regss.eax)
@@ -75,7 +75,7 @@ struct user_regs_struct_full {
 #    define SYSCALL_REG_ARG3(regss) (regss.esi)
 #    define SYSCALL_REG_ARG4(regss) (regss.edi)
 #    define SYSCALL_REG_ARG5(regss) (regss.ebp)
-#    define SYSCALL_RETED(regss) (regss.eax != -38)     // $$$  TODO: TEST $$$
+#    define SYSCALL_RETED(regss) (regss.eax != ((unsigned long long)-38))
 # endif
 
 

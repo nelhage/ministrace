@@ -3,21 +3,10 @@ set(CMAKE_BUILD_TYPE Debug)     # Ensure debug info and assert functions are bui
 
 
 # -- CMake options --
-option(WITH_TESTS "Build tests" ON)
+option(WITH_TEST_PROGRAMS "Build programs for testing tracing" ON)
 
 
-if (WITH_TESTS)
-    # -- Project(s) --
-    # - Component tests -
-    add_executable(tmap_test
-            ../src/trace/internal/tmap.c
-            tmap_test.c)
-    target_link_libraries(tmap_test
-            atomic_hash_object)
-    target_include_directories(tmap_test PRIVATE
-            $<TARGET_PROPERTY:atomic_hash_object,INTERFACE_INCLUDE_DIRECTORIES>)
-
-
+if (WITH_TEST_PROGRAMS)
     # - Programs for testing tracing  -
     add_executable(trace_pthread_fork
             trace_pthread_fork.c)

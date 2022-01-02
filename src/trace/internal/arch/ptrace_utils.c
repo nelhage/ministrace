@@ -17,7 +17,7 @@ long __ptrace_get_reg_content(pid_t pid, struct user_regs_struct_full *regs) {
 	if ((err = ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov))) {      // 1. Get reg contents
 		return err;
 	} else {
-		iov.iov_base = ((struct user_regs_struct*)iov.iov_base) + 1  /* += sizeof (struct user_regs_struct) */;	 	   // $$ TODO: ASK CORRECT $$
+		iov.iov_base = ((struct user_regs_struct*)iov.iov_base) + 1  /* += sizeof (struct user_regs_struct) */;	 	   // $$ TODO: ASK WHETHER CORRECT $$
 		iov.iov_len = sizeof (int);
 		return ptrace(PTRACE_GETREGSET, pid, NT_ARM_SYSTEM_CALL, &iov);    // 2. Get syscall-nr
 	}

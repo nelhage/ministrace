@@ -8,7 +8,6 @@
 
 #include "internal/ptrace_utils.h"
 #include "internal/syscalls.h"
-#include "internal/tmap.h"
 
 #include "tracing.h"
 
@@ -20,13 +19,11 @@
 
 
 /* -- Global consts -- */
-#define DEFAULT_TMAP_MAX_SIZE 5000
-
 #define PTRACE_TRAP_INDICATOR_BIT (1 << 7)
 
 
 /* -- Function prototypes -- */
-int wait_for_syscall_or_exit(pid_t pid, int *exit_status);
+int wait_for_syscall_or_exit(pid_t tid, int *exit_status);
 
 void wait_for_user_input(void);
 
@@ -119,8 +116,6 @@ int do_tracer(const pid_t tracee_pid,
 
 
 /* 1. Trace */
-    tmap_create(DEFAULT_TMAP_MAX_SIZE);
-
     int exit_status = -1;
     pid_t cur_tid = tracee_pid;
     while(1) {
@@ -136,13 +131,6 @@ int do_tracer(const pid_t tracee_pid,
             } else {
                 LOG_DEBUG("Child thread %d exited, continuing ...", -(status_tid));
 
-                /* Cleanup (only necessary for terminated tasks who had PENDING SYSCALL_EXIT) */
-                long *found_child_s_nr = NULL;
-                tmap_get(&cur_tid, &found_child_s_nr);
-                if (found_child_s_nr) {
-                    tmap_remove(&cur_tid);
-                }
-
                 cur_tid = -1;
                 continue;
             }
@@ -152,15 +140,12 @@ int do_tracer(const pid_t tracee_pid,
             LOG_DEBUG("Thread %d hit breakpoint ...", status_tid);
             cur_tid = status_tid;
 
-            long *found_child_s_nr = NULL;
-            tmap_get(&cur_tid, &found_child_s_nr);
+            const bool tracee_returned_from_scall = ptrace_syscall_has_returned(cur_tid);
 
             /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
-            if (!found_child_s_nr) {
+            if (!tracee_returned_from_scall) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
                 const long syscall_nr = ptrace_get_syscall_nr(cur_tid);
-
-                tmap_add_or_update(&cur_tid, &syscall_nr);
 
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
@@ -181,8 +166,9 @@ int do_tracer(const pid_t tracee_pid,
                 const long syscall_rtn_val = ptrace_get_syscall_rtn_value(cur_tid);
 
                 if (follow_fork) {
-                    fprintf(stderr, "\n... [%d - %s (%ld)]",
-                            cur_tid, get_syscall_name_with_fallback(*found_child_s_nr), *found_child_s_nr);
+                    const long syscall_nr = ptrace_get_syscall_nr(cur_tid);
+                    fprintf(stderr, "\n... [%d - %s (%d)]",
+                            cur_tid, get_syscall_name_with_fallback(syscall_nr), cur_tid);
                 }
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
@@ -191,13 +177,9 @@ int do_tracer(const pid_t tracee_pid,
                     print_backtrace_of_tracee(cur_tid);
                 }
 #endif /* WITH_STACK_UNWINDING */
-
-                tmap_remove(&cur_tid);
             }
         }
     }
-
-    tmap_destroy();
 
     return exit_status;
 }
@@ -220,7 +202,7 @@ void wait_for_user_input(void) {
     while ( '\n' != (c = getchar()) && EOF != c ) {} // wait until user presses enter to continue
 }
 
-int wait_for_syscall_or_exit(pid_t pid, int *exit_status) {
+int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
     int sig = 0;
     siginfo_t si;
 
@@ -243,8 +225,8 @@ int wait_for_syscall_or_exit(pid_t pid, int *exit_status) {
          *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
          *                         passes the signal to the tracee in the next ptrace restart request.
          */
-        if (-1 != pid) {        /* Allow function to ONLY WAIT (e.g., when prior child terminated) */
-            DIE_WHEN_ERRNO(ptrace(PTRACE_SYSCALL, pid, 0, sig));
+        if (-1 != tid) {        /* Allow function to ONLY WAIT (e.g., when prior child terminated) */
+            DIE_WHEN_ERRNO(ptrace(PTRACE_SYSCALL, tid, 0, sig));
         }
 
         /* Reset restart signal */
@@ -278,7 +260,7 @@ int wait_for_syscall_or_exit(pid_t pid, int *exit_status) {
          *     - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
         if (WIFSTOPPED(status)) {
-            pid = wait_tid;
+            tid = wait_tid;
             const int stopsig = WSTOPSIG(status);
 
             /* (I) Syscall-enter-/-exit-stop

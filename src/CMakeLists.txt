@@ -4,23 +4,18 @@ set(HEADERS
         trace/internal/arch/ptrace_utils.h
         trace/internal/ptrace_utils.h
         trace/internal/syscalls.h
-        trace/internal/tmap.h
         trace/tracing.h
         cli.h)
 set(SOURCES
         trace/internal/arch/ptrace_utils.c
         trace/internal/ptrace_utils.c
         trace/internal/syscalls.c
-        trace/internal/tmap.c
         trace/tracing.c
         cli.c
         main.c)
 
 set(COMPILE_OPTIONS
         "")
-
-set(LINK_OPTIONS
-        "atomic_hash_object")
 
 
 # -- CMake options --
@@ -77,5 +72,4 @@ target_link_libraries(ministrace PRIVATE
 
 target_include_directories(ministrace PRIVATE
         "${CMAKE_SOURCE_DIR}/src"
-        "${ministrace_BINARY_DIR}/src"
-         $<TARGET_PROPERTY:atomic_hash_object,INTERFACE_INCLUDE_DIRECTORIES>)
+        "${ministrace_BINARY_DIR}/src")

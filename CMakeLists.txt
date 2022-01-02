@@ -22,19 +22,5 @@ add_compile_options(
 
 
 # -- "Subdirs" containing projects --
-include(${ministrace_SOURCE_DIR}/cmake/AddGitSubModule.cmake)
-
-# Solution from https://www.scivision.dev/cmake-git-submodule/
-#
-# If this fails, start anew by adding the  git as submodule
-# git rm --cached ext/atomic_hash
-# rm -rf atomic_hash
-# git submodule add https://github.com/therealthingy/atomic_hash.git
-
-add_git_submodule(ext/atomic_hash)
-
-add_subdirectory(ext)
-
-
 add_subdirectory(src)
 add_subdirectory(test)
