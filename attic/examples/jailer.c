@@ -65,12 +65,12 @@ static inline long ptrace_get_reg_content(pid_t pid, struct user_regs_struct_ful
 		.iov_len = sizeof (struct user_regs_struct_full),
 	};
 	register long err;
-	if (err = ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov)) {
+	if (err = ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov)) {       // 1. Get reg contents
 		return err;
 	} else {
 		iov.iov_base += sizeof (struct user_regs_struct);
 		iov.iov_len = sizeof (int);
-		return ptrace(PTRACE_GETREGSET, pid, NT_ARM_SYSTEM_CALL, &iov);
+		return ptrace(PTRACE_GETREGSET, pid, NT_ARM_SYSTEM_CALL, &iov);   // 2. Get syscall-nr
 	}
 }
 
