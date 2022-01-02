@@ -8,7 +8,7 @@
 #include "../../common/error.h"
 
 
-long __get_reg_content(pid_t pid, size_t off_user_struct) {
+long __ptrace_get_reg_content(pid_t pid, size_t off_user_struct) {
     /*
      * ELUCIDATION:
      *   - `PTRACE_PEEKUSER`: Read & return a word at offset `addr` (must be word-aligned) in the
@@ -21,22 +21,21 @@ long __get_reg_content(pid_t pid, size_t off_user_struct) {
     return reg_val;
 }
 
-
-/* - Helpers - */
 long get_syscall_arg(pid_t pid, int which) {
     switch (which) {
-        case 0: return get_reg_content(pid, REG_SYSCALL_ARG0);
-        case 1: return get_reg_content(pid, REG_SYSCALL_ARG1);
-        case 2: return get_reg_content(pid, REG_SYSCALL_ARG2);
-        case 3: return get_reg_content(pid, REG_SYSCALL_ARG3);
-        case 4: return get_reg_content(pid, REG_SYSCALL_ARG4);
-        case 5: return get_reg_content(pid, REG_SYSCALL_ARG5);
+        case 0: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG0);
+        case 1: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG1);
+        case 2: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG2);
+        case 3: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG3);
+        case 4: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG4);
+        case 5: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG5);
 
         default: return -1L;        /* Invalid */
     }
 }
 
-char *read_string(pid_t pid, unsigned long addr) {
+
+char *ptrace_read_string(pid_t pid, unsigned long addr) {
     char *read_str;
     size_t read_str_size_bytes = 2048;
 /* Allocate memory as buffer for string to be read */

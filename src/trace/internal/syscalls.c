@@ -57,7 +57,7 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
                 break;
 #ifdef PRINT_STRINGS
             case ARG_STR: {
-                char* strval = read_string(pid, arg);
+                char* strval = ptrace_read_string(pid, arg);
 
                 // fprintf(stderr, "\"%s\"", strval);
                 fprintf(stderr, "\""); _fprint_str_esc(stderr, strval); fprintf(stderr, "\"");

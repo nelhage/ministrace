@@ -159,7 +159,7 @@ int do_tracer(const pid_t tracee_pid,
             /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
             if (!found_child_s_nr) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
-                const long syscall_nr = get_reg_content(cur_tid, REG_SYSCALL_NR);
+                const long syscall_nr = ptrace_get_reg_content(cur_tid, REG_SYSCALL_NR);
 
                 tmap_add_or_update(&cur_tid, &syscall_nr);
 
@@ -177,7 +177,7 @@ int do_tracer(const pid_t tracee_pid,
                 /* >> Syscall EXIT (syscall return value) << */
             } else {
                 LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
-                const long syscall_rtn_val = get_reg_content(cur_tid, REG_SYSCALL_RTN_VAL);
+                const long syscall_rtn_val = ptrace_get_reg_content(cur_tid, REG_SYSCALL_RTN_VAL);
 
                 if (follow_fork) {
                     fprintf(stderr, "\n... [%d - %s (%ld)]",
