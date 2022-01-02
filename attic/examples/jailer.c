@@ -15,12 +15,11 @@
 #include <unistd.h>
 
 // #include <sys/resource.h>
-// #include <sys/user.h>
 
 
 #ifdef __x86_64__
 #  include <elf.h>
-#  include <sys/procfs.h>
+#  include <sys/user.h>
 #endif
 
 
