@@ -11,6 +11,7 @@
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -36,7 +37,6 @@ struct user_regs_struct_full {
 
 #else /* __x86_64__ / __i386__ */
 
-#  include <sys/user.h>
 #  define user_regs_struct_full user_regs_struct
 
 #endif
