@@ -25,13 +25,13 @@
 
 /* - Types - */
 struct user_regs_struct_full {
-	union {
-		struct user_regs_struct user_regs;
-		struct {
-			unsigned long regs[31];
-			unsigned long sp;
-			unsigned long pc;
-			unsigned long pstate;
+	__extension__ union {									 /* `__extension__` to disable anonymous struct/union warning */
+		struct user_regs_struct user_regs;   /* Required to make sure alignment is correct */
+		struct {  													 /* Use anonymous union + struct to access elements as if they were direct members of full struct */
+			unsigned long long regs[31];
+			unsigned long long sp;
+			unsigned long long pc;
+			unsigned long long pstate;
 		};
 	};
 	int syscallno;
