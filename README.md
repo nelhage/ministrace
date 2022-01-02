@@ -31,17 +31,10 @@ detail how it works.
   * On Ubuntu: `sudo snap install cmake --classic` + `sudo apt install -y cmake-curses-gui`
 
 ### 2.2. Requirements based on chosen cmake options
-* Option `FUNCTION`:
-  * `CITY3HASH_128`: CPU must support SSE4.2
-  * `MD5HASH`: Installed `libssl-dev` (`sudo apt install -y libssl-dev`)
 * Option `WITH_STACK_UNWINDING`: Installed `libunwind-dev` + `libiberty-dev` (`sudo apt install -y libunwind-dev libiberty-dev`)
 
 
 ### 2.3. Out-of-source build
-0. Add git submodules
-    * `git rm --cached ext/atomic_hash`
-    * `rm -rf ext/atomic_hash`
-    * `git submodule add https://github.com/therealthingy/atomic_hash.git ext/atomic_hash`
 1. `mkdir build && cd build`
 2. `ccmake -DCMAKE_BUILD_TYPE=Release ..` &rarr; press `c` &rarr; set `LINUX_SRC_DIR` (to downloaded Linux kernel sources) &rarr; press `c` &rarr; press `g`
 3. `cmake --build .`
