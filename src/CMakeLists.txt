@@ -1,16 +1,17 @@
 
 # -- Variables --
-set(SOURCE
+set(HEADERS
         trace/internal/ptrace_arch.h
         trace/internal/ptrace_fcts.h
-        trace/internal/ptrace_fcts.c
         trace/internal/syscalls.h
-        trace/internal/syscalls.c
         trace/internal/tmap.h
-        trace/internal/tmap.c
         trace/tracing.h
+        cli.h)
+set(SOURCES
+        trace/internal/ptrace_fcts.c
+        trace/internal/syscalls.c
+        trace/internal/tmap.c
         trace/tracing.c
-        cli.h
         cli.c
         main.c)
 
@@ -23,7 +24,7 @@ set(LINK_OPTIONS
 
 # -- CMake options --
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
-option(PRINT_STRINGS "Print string instead of pointer (e.g., in read syscall); Disabling this option improves stability / performance" OFF)
+option(PRINT_STRINGS "Print string instead of pointer (e.g., in `read` syscall); Note: Disabling this option improves performance" OFF)
 option(WITH_STACK_UNWINDING "Stack unwinding option -k" OFF)
 
 if (PRINT_STRINGS)
@@ -31,8 +32,9 @@ if (PRINT_STRINGS)
 endif()
 
 if (WITH_STACK_UNWINDING)
-    list(APPEND SOURCE
-            trace/internal/unwind.h
+    list(APPEND HEADERS
+            trace/internal/unwind.h)
+    list(APPEND SOURCES
             trace/internal/unwind.c)
     list(APPEND COMPILE_OPTIONS "-DWITH_STACK_UNWINDING")
     list(APPEND LINK_OPTIONS
@@ -55,13 +57,16 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${GEN_SYSCALLS_TARGET_DIR}
         COMMAND ${PYTHON_EXECUTABLE} ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR} ${GEN_SYSCALLS_TARGET_DIR})
 
-list(APPEND SOURCE
-        ${GEN_SYSCALLS_TARGET_DIR}/syscallents.h
+list(APPEND HEADERS
+        ${GEN_SYSCALLS_TARGET_DIR}/syscallents.h)
+list(APPEND SOURCES
         ${GEN_SYSCALLS_TARGET_DIR}/syscallents.c)
 
 
 # -- Project --
-add_executable(ministrace ${SOURCE})
+add_executable(ministrace
+        ${HEADERS}
+        ${SOURCES})
 
 target_compile_options(ministrace PRIVATE
         ${COMPILE_OPTIONS})

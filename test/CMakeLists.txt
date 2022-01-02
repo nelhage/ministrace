@@ -12,12 +12,18 @@ if (WITH_TESTS)
     add_executable(tmap_test
             ../src/trace/internal/tmap.c
             tmap_test.c)
-    target_link_libraries(tmap_test hashmap)
+    target_link_libraries(tmap_test
+            atomic_hash_object)
+    target_include_directories(tmap_test PRIVATE
+            $<TARGET_PROPERTY:atomic_hash_object,INTERFACE_INCLUDE_DIRECTORIES>)
 
 
-    # - Test tracing programs -
-    add_executable(trace_pthread_fork trace_pthread_fork.c)
-    target_link_libraries(trace_pthread_fork pthread)
+    # - Programs for testing tracing  -
+    add_executable(trace_pthread_fork
+            trace_pthread_fork.c)
+    target_link_libraries(trace_pthread_fork
+            pthread)
 
-    add_executable(trace_descendants trace_descendants.c)
+    add_executable(trace_descendants
+            trace_descendants.c)
 endif()
