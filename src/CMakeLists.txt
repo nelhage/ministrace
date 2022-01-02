@@ -1,14 +1,15 @@
 
 # -- Variables --
 set(HEADERS
-        trace/internal/ptrace_arch.h
-        trace/internal/ptrace_fcts.h
+        trace/internal/arch/ptrace_utils.h
+        trace/internal/ptrace_utils.h
         trace/internal/syscalls.h
         trace/internal/tmap.h
         trace/tracing.h
         cli.h)
 set(SOURCES
-        trace/internal/ptrace_fcts.c
+        trace/internal/arch/ptrace_utils.c
+        trace/internal/ptrace_utils.c
         trace/internal/syscalls.c
         trace/internal/tmap.c
         trace/tracing.c

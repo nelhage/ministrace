@@ -1,38 +1,46 @@
 #include <errno.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "ptrace_arch.h"
-#include "ptrace_fcts.h"
+#include <sys/ptrace.h>
+
+#include "arch/ptrace_utils.h"
+#include "ptrace_utils.h"
 
 #include "../../common/error.h"
 
 
-long __ptrace_get_reg_content(pid_t pid, size_t off_user_struct) {
-    /*
-     * ELUCIDATION:
-     *   - `PTRACE_PEEKUSER`: Read & return a word at offset `addr` (must be word-aligned) in the
-     *      tracee's USER area (see <sys/user.h>), which holds the registers & other process information
-     */
-    long reg_val = ptrace(PTRACE_PEEKUSER, pid, off_user_struct);
-    if (errno) {
-        LOG_ERROR_AND_EXIT("%s", strerror(errno));
-    }
-    return reg_val;
+
+long ptrace_get_syscall_nr(pid_t pid) {
+    struct user_regs_struct_full regs;
+    __ptrace_get_reg_content(pid, &regs);
+
+    return SYSCALL_REG_CALLNO(regs);
 }
 
-long get_syscall_arg(pid_t pid, int which) {
+long ptrace_get_syscall_arg(pid_t pid, int which) {
+    struct user_regs_struct_full regs;
+    __ptrace_get_reg_content(pid, &regs);
+
     switch (which) {
-        case 0: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG0);
-        case 1: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG1);
-        case 2: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG2);
-        case 3: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG3);
-        case 4: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG4);
-        case 5: return ptrace_get_reg_content(pid, REG_SYSCALL_ARG5);
+        case 0: return SYSCALL_REG_ARG0(regs);
+        case 1: return SYSCALL_REG_ARG1(regs);
+        case 2: return SYSCALL_REG_ARG2(regs);
+        case 3: return SYSCALL_REG_ARG3(regs);
+        case 4: return SYSCALL_REG_ARG4(regs);
+        case 5: return SYSCALL_REG_ARG5(regs);
 
         default: return -1L;        /* Invalid */
     }
 }
+
+long ptrace_get_syscall_rtn_value(pid_t pid) {
+    struct user_regs_struct_full regs;
+    __ptrace_get_reg_content(pid, &regs);
+
+    return SYSCALL_REG_RETURN(regs);
+}
+
 
 
 char *ptrace_read_string(pid_t pid, unsigned long addr) {

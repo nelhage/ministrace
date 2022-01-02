@@ -1,22 +1,12 @@
 // Source: https://gist.github.com/SBell6hf/77393dac37939a467caf8b241dc1676b
 // License: The Unlicense
 
+
+
 #include <elf.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
 #include <sys/ptrace.h>
-#include <sys/syscall.h>
 #include <sys/uio.h>
 #include <sys/user.h>
-#include <sys/wait.h>
-#include <time.h>
-#include <unistd.h>
-
-
 
 // ------------------------------------------- Arch specific stuff -------------------------------------------
 #ifdef __aarch64__
@@ -55,7 +45,6 @@ struct user_regs_struct_full {
 #  define SYSCALL_REG_ARG3(regss) (regss.regs[3])
 #  define SYSCALL_REG_ARG4(regss) (regss.regs[4])
 #  define SYSCALL_REG_ARG5(regss) (regss.regs[5])
-
 #  define SYSCALL_RETED(regss) (regss.regs[7] == 1 && SYSCALL_REG_CALLNO(regss) != NO_SYSCALL)
 #  define SYSCALL_SETCALLNO(regss, call_no) (regss.regs[8] = regss.syscallno = call_no)
 
@@ -142,6 +131,20 @@ static inline long ptrace_set_reg_content(pid_t pid, struct user_regs_struct_ful
 
 
 
+
+
+
+
+#include <errno.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 
 #ifndef MAP_ANONYMOUS

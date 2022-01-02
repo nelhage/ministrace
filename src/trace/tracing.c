@@ -1,19 +1,19 @@
-#include <unistd.h>
-#include <stdio.h>
 #include <errno.h>
-#include <string.h>
-#include <sys/wait.h>
 #include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-#include "internal/ptrace_arch.h"
-#include "internal/ptrace_fcts.h"
+#include "internal/ptrace_utils.h"
 #include "internal/syscalls.h"
 #include "internal/tmap.h"
 
 #include "tracing.h"
 
 #ifdef WITH_STACK_UNWINDING
-#include "internal/unwind.h"
+#  include "internal/unwind.h"
 #endif
 
 #include "../common/error.h"
@@ -31,7 +31,7 @@ int wait_for_syscall_or_exit(pid_t pid, int *exit_status);
 void wait_for_user_input(void);
 
 const char *get_syscall_name_with_fallback(long syscall_nr);
-void print_syscall(pid_t pid, long syscall_nr);
+void print_syscall_nr_and_args(pid_t tid, long syscall_nr);
 
 
 
@@ -159,14 +159,14 @@ int do_tracer(const pid_t tracee_pid,
             /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
             if (!found_child_s_nr) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
-                const long syscall_nr = ptrace_get_reg_content(cur_tid, REG_SYSCALL_NR);
+                const long syscall_nr = ptrace_get_syscall_nr(cur_tid);
 
                 tmap_add_or_update(&cur_tid, &syscall_nr);
 
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
                 }
-                print_syscall(cur_tid, syscall_nr);
+                print_syscall_nr_and_args(cur_tid, syscall_nr);
 
                 /* Stop (i.e., single step) if requested */
                 if (syscall_nr == pause_on_syscall_nr) {
@@ -177,7 +177,7 @@ int do_tracer(const pid_t tracee_pid,
                 /* >> Syscall EXIT (syscall return value) << */
             } else {
                 LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
-                const long syscall_rtn_val = ptrace_get_reg_content(cur_tid, REG_SYSCALL_RTN_VAL);
+                const long syscall_rtn_val = ptrace_get_syscall_rtn_value(cur_tid);
 
                 if (follow_fork) {
                     fprintf(stderr, "\n... [%d - %s (%ld)]",
@@ -214,9 +214,9 @@ const char *get_syscall_name_with_fallback(long syscall_nr) {
     }
 }
 
-void print_syscall(pid_t pid, long syscall_nr) {
+void print_syscall_nr_and_args(pid_t tid, long syscall_nr) {
     fprintf(stderr, "%s(", get_syscall_name_with_fallback(syscall_nr));
-    print_syscall_args(pid, syscall_nr);
+    print_syscall_args(tid, syscall_nr);
     fprintf(stderr, ")");
 }
 

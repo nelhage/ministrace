@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include <string.h>
-#include <locale.h>
 
+#include "generated/syscallents.h"
+#include "ptrace_utils.h"
+#include "syscall_types.h"
 #include "syscalls.h"
 
-#include "syscall_types.h"
-#include "generated/syscallents.h"
 
-#include "ptrace_fcts.h"
-
+#ifdef PRINT_STRINGS
+#  include <ctype.h>
+#  include <locale.h>
+#  include <stdlib.h>
 
 /* -- Function prototypes -- */
-#ifdef PRINT_STRINGS
 static void _fprint_str_esc(FILE* restrict stream, char* str);
 #endif /* PRINT_STRINGS */
 
@@ -49,7 +50,7 @@ void print_syscall_args(pid_t pid, long syscall_nr) {
         nargs = ent->nargs;
     }
     for (int arg_nr = 0; arg_nr < nargs; arg_nr++) {
-        long arg = get_syscall_arg(pid, arg_nr);
+        long arg = ptrace_get_syscall_arg(pid, arg_nr);
         long type = ent ? ent->args[arg_nr] : ARG_PTR;      /* Default to `ARG_PTR` */
         switch (type) {
             case ARG_INT:

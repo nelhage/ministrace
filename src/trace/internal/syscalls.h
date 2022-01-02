@@ -1,6 +1,6 @@
 /**
  * Functions which make use of `syscallents` type
- *   May also make use of "ptrace_fcts"
+ *   May also make use of "ptrace_utils"
  */
 #ifndef TRACE_SYSCALLS_H
 #define TRACE_SYSCALLS_H
