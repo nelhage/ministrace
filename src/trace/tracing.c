@@ -116,14 +116,14 @@ int do_tracer(const pid_t tracee_pid,
 
 
 /* 1. Trace */
-    int exit_status = -1;
+    int tracee_exit_status = -1;
     pid_t cur_tid = tracee_pid;
     while(1) {
         /* Wait for a child to change state (stop or terminate) */
-        const pid_t status_tid = _wait_for_syscall_or_exit(cur_tid, &exit_status);
+        const pid_t status_tid = _wait_for_syscall_or_exit(cur_tid, &tracee_exit_status);
 
         /* Check status */
-        /* Thread terminated --> negative int */
+        /*   -> Thread terminated (indicated via negative int) */
         if (0 > status_tid) {
             if (-(tracee_pid) == status_tid) {
                 LOG_DEBUG("Main thread %d exited, stopping tracing ...", -(status_tid));
@@ -135,7 +135,7 @@ int do_tracer(const pid_t tracee_pid,
                 continue;
             }
 
-            /* -> Thread stopped --> positive int = hit breakpoint */
+        /*   -> Thread stopped (i.e., hit breakpoint; indicated via positive int) */
         } else {
             LOG_DEBUG("Thread %d hit breakpoint ...", status_tid);
             cur_tid = status_tid;
@@ -143,14 +143,12 @@ int do_tracer(const pid_t tracee_pid,
             struct user_regs_struct_full regs;
             ptrace_get_regs_content(cur_tid, &regs);
 
-            const bool tracee_returned_from_scall = SYSCALL_RETED(regs);
             const long syscall_nr = SYSCALL_REG_CALLNO(regs);
 
-            /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
-            if (!tracee_returned_from_scall) {
+            /* >> Syscall ENTER: Print syscall-nr + -args << */
+            if (!SYSCALL_RETED(regs)) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
 
-                /* Print information (syscall-no + name & args) */
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
                 }
@@ -158,22 +156,20 @@ int do_tracer(const pid_t tracee_pid,
                 syscalls_print_args(cur_tid, &regs);
                 fprintf(stderr, ")");
 
-                /* Stop (i.e., single step) if requested */
+                /* OPTIONAL: Stop (i.e., single step) if requested */
                 if (syscall_nr == pause_on_syscall_nr) {
                     _wait_for_user_input();
                 }
 
-
-                /* >> Syscall EXIT (syscall return value) << */
+            /* >> Syscall EXIT: Print syscall return value (+ optionally stacktrace) << */
             } else {
                 LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
-                const long syscall_rtn_val = SYSCALL_REG_RETURN(regs);
 
-                /* Print information (syscall rtn value) */
-                if (follow_fork) {
+                if (follow_fork) {      /* For task identification (in log) when following `clone`s */
                     fprintf(stderr, "\n... [%d - %s (%d)]",
                             cur_tid, _get_syscall_name_with_fallback(syscall_nr), cur_tid);
                 }
+                const long syscall_rtn_val = SYSCALL_REG_RETURN(regs);
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
 #ifdef WITH_STACK_UNWINDING
@@ -185,7 +181,7 @@ int do_tracer(const pid_t tracee_pid,
         }
     }
 
-    return exit_status;
+    return tracee_exit_status;
 }
 
 const char *_get_syscall_name_with_fallback(long syscall_nr) {
