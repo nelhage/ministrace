@@ -27,8 +27,6 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status);
 
 void _wait_for_user_input(void);
 
-const char *_get_syscall_name_with_fallback(long syscall_nr);
-
 
 
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
@@ -145,6 +143,11 @@ int do_tracer(const pid_t tracee_pid,
 
             const long syscall_nr = SYSCALL_REG_CALLNO(regs);
 
+            const char* scall_name = NULL;
+            if (!(scall_name = syscalls_get_name(syscall_nr))) {
+                LOG_ERROR_AND_EXIT("Unknown syscall w/ nr %ld", syscall_nr);
+            }
+
             /* >> Syscall ENTER: Print syscall-nr + -args << */
             if (!SYSCALL_RETED(regs)) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
@@ -152,7 +155,7 @@ int do_tracer(const pid_t tracee_pid,
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
                 }
-                fprintf(stderr, "%s(", _get_syscall_name_with_fallback(syscall_nr));
+                fprintf(stderr, "%s(", scall_name);
                 syscalls_print_args(cur_tid, &regs);
                 fprintf(stderr, ")");
 
@@ -167,7 +170,7 @@ int do_tracer(const pid_t tracee_pid,
 
                 if (follow_fork) {      /* For task identification (in log) when following `clone`s */
                     fprintf(stderr, "\n... [%d - %s (%d)]",
-                            cur_tid, _get_syscall_name_with_fallback(syscall_nr), cur_tid);
+                            cur_tid, scall_name, cur_tid);
                 }
                 const long syscall_rtn_val = SYSCALL_REG_RETURN(regs);
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
@@ -182,19 +185,6 @@ int do_tracer(const pid_t tracee_pid,
     }
 
     return tracee_exit_status;
-}
-
-const char *_get_syscall_name_with_fallback(long syscall_nr) {
-    const char *scall_name = NULL;
-    if ((scall_name = syscalls_get_name(syscall_nr))) {
-        return scall_name;
-
-    } else {
-        LOG_WARN("Unknown syscall w/ nr %ld", syscall_nr);
-        static char fallback_generic_syscall_name[128];     // Warning: Not thread-safe
-        snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
-        return fallback_generic_syscall_name;
-    }
 }
 
 void _wait_for_user_input(void) {
