@@ -21,6 +21,12 @@ add_compile_options(
         -Wswitch-enum -Wswitch-default -Werror -frecord-gcc-switches)
 
 
+# -- CMake options --
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release" FORCE)
+endif()
+
+
 # -- "Subdirs" containing projects --
 add_subdirectory(src)
 add_subdirectory(test)

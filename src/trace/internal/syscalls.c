@@ -52,7 +52,7 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
         ent = &syscalls[syscall_nr];
         nargs = ent->nargs;
     } else {
-        LOG_ERROR_AND_EXIT("Invalid syscall_nr (%ld)", syscall_nr);
+        LOG_DEBUG("Unknown syscall w/ nr %ld", syscall_nr);
     }
 
     for (int arg_nr = 0; arg_nr < nargs; arg_nr++) {

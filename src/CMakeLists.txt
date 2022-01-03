@@ -19,10 +19,6 @@ set(COMPILE_OPTIONS
 
 
 # -- CMake options --
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release" FORCE)
-endif()
-
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
 option(PRINT_STRINGS "Print string instead of pointer (e.g., in `read` syscall); Note: Disabling this option improves performance" OFF)
 option(WITH_STACK_UNWINDING "Stack unwinding option -k" OFF)
@@ -36,7 +32,8 @@ if (WITH_STACK_UNWINDING)
             trace/internal/unwind.h)
     list(APPEND SOURCES
             trace/internal/unwind.c)
-    list(APPEND COMPILE_OPTIONS "-DWITH_STACK_UNWINDING")
+    list(APPEND COMPILE_OPTIONS
+            "-DWITH_STACK_UNWINDING")
     list(APPEND LINK_OPTIONS
             unwind-ptrace unwind-generic
             iberty)
