@@ -8,12 +8,16 @@
 #include <unistd.h>
 
 
+/* -- Type declarations -- */
+struct user_regs_struct_full ;
+
+
 /* -- Function prototypes -- */
-const char *get_syscall_name(long syscall_nr);
-long get_syscall_nr(char* syscall_name);
+const char *syscalls_get_name(long syscall_nr);
+long syscalls_get_nr(char* syscall_name);
 
-void print_syscall_args(pid_t pid, long syscall_nr);
+void syscalls_print_args(pid_t tid, struct user_regs_struct_full *regs);
 
-void print_all_supported_syscalls(void);
+void syscalls_print_all(void);
 
 #endif /* TRACE_SYSCALLS_H */

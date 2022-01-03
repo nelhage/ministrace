@@ -4,49 +4,9 @@
 
 #include <sys/ptrace.h>
 
-#include "arch/ptrace_utils.h"
 #include "ptrace_utils.h"
 
 #include "../../common/error.h"
-
-
-
-long ptrace_get_syscall_nr(pid_t tid) {
-    struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(tid, &regs);
-
-    return SYSCALL_REG_CALLNO(regs);
-}
-
-long ptrace_get_syscall_arg(pid_t tid, int which) {
-    struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(tid, &regs);
-
-    switch (which) {
-        case 0: return SYSCALL_REG_ARG0(regs);
-        case 1: return SYSCALL_REG_ARG1(regs);
-        case 2: return SYSCALL_REG_ARG2(regs);
-        case 3: return SYSCALL_REG_ARG3(regs);
-        case 4: return SYSCALL_REG_ARG4(regs);
-        case 5: return SYSCALL_REG_ARG5(regs);
-
-        default: return -1L;        /* Invalid */
-    }
-}
-
-long ptrace_get_syscall_rtn_value(pid_t tid) {
-    struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(tid, &regs);
-
-    return SYSCALL_REG_RETURN(regs);
-}
-
-bool ptrace_syscall_has_returned(pid_t tid) {
-    struct user_regs_struct_full regs;
-    __ptrace_get_reg_content(tid, &regs);
-
-    return SYSCALL_RETED(regs);
-}
 
 
 
@@ -69,6 +29,7 @@ char *ptrace_read_string(pid_t tid, unsigned long addr) {
             }
         }
     /* Read from tracee (each time one word) */
+        errno = 0;
         ptrace_read_word = ptrace(PTRACE_PEEKDATA, tid, addr + read_bytes);
         if (errno) {
             read_str[read_bytes] = '\0';

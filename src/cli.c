@@ -52,7 +52,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                     argp_usage(state);
                 }
 
-                if (!get_syscall_name(parsed_syscall_nr)) {
+                if (!syscalls_get_name(parsed_syscall_nr)) {
                     argp_usage(state);
                 }
                 arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
@@ -64,7 +64,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'a':
             {
                 long syscall_nr = -1;
-                if (0 <= (syscall_nr = get_syscall_nr(arg))) {
+                if (0 <= (syscall_nr = syscalls_get_nr(arg))) {
                     arguments->pause_on_scall_nr = syscall_nr;
                     arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
                     return 0;

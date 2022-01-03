@@ -7,6 +7,7 @@
 #include <sys/types.h>
 
 
+/* -- Types -- */
 typedef struct cli_args {
     bool list_syscalls;
     pid_t attach_to_process;

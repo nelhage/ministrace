@@ -1,42 +1,55 @@
 #include <elf.h>
+#include <errno.h>
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 
+#include "../../../common/error.h"
+#include "../ptrace_utils.h"
 #include "ptrace_utils.h"
 
 
-/* ----------------------- -----------------------   arm64    ----------------------- ----------------------- */
-#ifdef __aarch64__
 
-long __ptrace_get_reg_content(pid_t pid, struct user_regs_struct_full *regs) {
+/* ----------------------- ----------------------- amd64 / i386 ----------------------- ----------------------- */
+#if defined(__x86_64__) || defined(__i386__)
+
+void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 	struct iovec iov = {
 		.iov_base = regs,
 		.iov_len = sizeof (struct user_regs_struct_full),
 	};
-	register long err;
-	if ((err = ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov))) {      // 1. Get reg contents
-		return err;
-	} else {
-		iov.iov_base = ((struct user_regs_struct*)iov.iov_base) + 1  /* += sizeof (struct user_regs_struct) */;	 	   // $$ TODO: ASK WHETHER CORRECT $$
-		iov.iov_len = sizeof (int);
-		return ptrace(PTRACE_GETREGSET, pid, NT_ARM_SYSTEM_CALL, &iov);    // 2. Get syscall-nr
-	}
 
-  // $$$ TODO: CHECK `errno` ??! $$$
+	errno = 0;
+	ptrace(PTRACE_GETREGSET, tid, NT_PRSTATUS, &iov);
+	if (errno) {
+		LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);
+	}
 }
 
 
-/* ----------------------- ----------------------- amd64 / i386 ----------------------- ----------------------- */
-#elif defined(__x86_64__) || defined(__i386__)
+/* ----------------------- -----------------------   arm64    ----------------------- ----------------------- */
+#elif defined(__aarch64__)
 
-long __ptrace_get_reg_content(pid_t pid, struct user_regs_struct_full *regs) {
+void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 	struct iovec iov = {
-		.iov_base = regs,
-		.iov_len = sizeof (struct user_regs_struct_full),
+		.iov_base = &(regs->user_regs),
+		.iov_len = sizeof(regs->user_regs),
 	};
-	return ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
 
-  // $$$ TODO: CHECK `errno` ??! $$$
+	errno = 0;
+	/* 1. Get reg contents */
+	ptrace(PTRACE_GETREGSET, tid, NT_PRSTATUS, &iov);
+	if (errno) {
+		LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);
+	}
+
+	/* 2. Get syscall-nr */
+	iov.iov_base = &(regs->syscallno);
+	iov.iov_len = sizeof(regs->syscallno);
+	ptrace(PTRACE_GETREGSET, tid, NT_ARM_SYSTEM_CALL, &iov);
+	if (errno) {
+		LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);
+	}
+	// regs->syscallno = 11;			// $$ TESTING $$
 }
 
 

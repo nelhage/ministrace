@@ -23,11 +23,11 @@
 
 
 /* -- Function prototypes -- */
-int wait_for_syscall_or_exit(pid_t tid, int *exit_status);
+int _wait_for_syscall_or_exit(pid_t tid, int *exit_status);
 
-void wait_for_user_input(void);
+void _wait_for_user_input(void);
 
-const char *get_syscall_name_with_fallback(long syscall_nr);
+const char *_get_syscall_name_with_fallback(long syscall_nr);
 
 
 
@@ -120,7 +120,7 @@ int do_tracer(const pid_t tracee_pid,
     pid_t cur_tid = tracee_pid;
     while(1) {
         /* Wait for a child to change state (stop or terminate) */
-        const pid_t status_tid = wait_for_syscall_or_exit(cur_tid, &exit_status);
+        const pid_t status_tid = _wait_for_syscall_or_exit(cur_tid, &exit_status);
 
         /* Check status */
         /* Thread terminated --> negative int */
@@ -140,35 +140,39 @@ int do_tracer(const pid_t tracee_pid,
             LOG_DEBUG("Thread %d hit breakpoint ...", status_tid);
             cur_tid = status_tid;
 
-            const bool tracee_returned_from_scall = ptrace_syscall_has_returned(cur_tid);
+            struct user_regs_struct_full regs;
+            ptrace_get_regs_content(cur_tid, &regs);
+
+            const bool tracee_returned_from_scall = SYSCALL_RETED(regs);
+            const long syscall_nr = SYSCALL_REG_CALLNO(regs);
 
             /* >> Syscall ENTER: Print syscall (based on retrieved syscall nr) << */
             if (!tracee_returned_from_scall) {
                 LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
-                const long syscall_nr = ptrace_get_syscall_nr(cur_tid);
 
+                /* Print information (syscall-no + name & args) */
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
                 }
-                fprintf(stderr, "%s(", get_syscall_name_with_fallback(syscall_nr));
-                print_syscall_args(cur_tid, syscall_nr);
+                fprintf(stderr, "%s(", _get_syscall_name_with_fallback(syscall_nr));
+                syscalls_print_args(cur_tid, &regs);
                 fprintf(stderr, ")");
 
                 /* Stop (i.e., single step) if requested */
                 if (syscall_nr == pause_on_syscall_nr) {
-                    wait_for_user_input();
+                    _wait_for_user_input();
                 }
 
 
                 /* >> Syscall EXIT (syscall return value) << */
             } else {
                 LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
-                const long syscall_rtn_val = ptrace_get_syscall_rtn_value(cur_tid);
+                const long syscall_rtn_val = SYSCALL_REG_RETURN(regs);
 
+                /* Print information (syscall rtn value) */
                 if (follow_fork) {
-                    const long syscall_nr = ptrace_get_syscall_nr(cur_tid);
                     fprintf(stderr, "\n... [%d - %s (%d)]",
-                            cur_tid, get_syscall_name_with_fallback(syscall_nr), cur_tid);
+                            cur_tid, _get_syscall_name_with_fallback(syscall_nr), cur_tid);
                 }
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
@@ -184,9 +188,9 @@ int do_tracer(const pid_t tracee_pid,
     return exit_status;
 }
 
-const char *get_syscall_name_with_fallback(long syscall_nr) {
+const char *_get_syscall_name_with_fallback(long syscall_nr) {
     const char *scall_name = NULL;
-    if ((scall_name = get_syscall_name(syscall_nr))) {
+    if ((scall_name = syscalls_get_name(syscall_nr))) {
         return scall_name;
 
     } else {
@@ -197,12 +201,12 @@ const char *get_syscall_name_with_fallback(long syscall_nr) {
     }
 }
 
-void wait_for_user_input(void) {
+void _wait_for_user_input(void) {
     int c;
     while ( '\n' != (c = getchar()) && EOF != c ) {} // wait until user presses enter to continue
 }
 
-int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
+int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
     int sig = 0;
     siginfo_t si;
 
