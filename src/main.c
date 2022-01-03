@@ -1,5 +1,6 @@
 /*
  * TODOs:
+ *   - Fix arm64 tracing support (current implementation returns wrong syscall nr ??)
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
  *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
  *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap`)
@@ -8,7 +9,6 @@
  *
  *
  *  KNOWN ISSUES:
- *     - Buggy arm64 tracing support
  *     - Applications:
  *       - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs -> uid issue ??)
  *        Console: [1]  + 48133 suspended (signal)  wireshark
