@@ -116,13 +116,13 @@ void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
 
     static const struct argp_option cli_options[] = {
-        {"list-syscalls", 'l', NULL, 0, "List supported syscalls", 0},
-        {"attach", 'p', "pid", 0, "Attach to already running process", 1},
-        {"follow-forks", 'f', NULL, 0, "Follow `fork`ed child processes", 2},
-        {"pause-snr", 'n', "nr", 0, "Pause on specified syscall nr", 3},
-        {"pause-sname", 'a', "name", 0, "Pause on specified syscall name", 3},
+        {"list-syscalls", 'l', NULL,   0, "List supported syscalls", 0},
+        {"attach",        'p', "pid",  0, "Attach to already running process", 1},
+        {"follow-forks",  'f', NULL,   0, "Follow `fork`ed child processes", 2},
+        {"pause-snr",     'n', "nr",   0, "Pause on specified syscall nr", 3},
+        {"pause-sname",   'a', "name", 0, "Pause on specified syscall name", 3},
 #ifdef WITH_STACK_UNWINDING
-        {"stack-traces", 'k', NULL, 0, "Print the execution stack trace of the traced processes after each system call", 4},
+        {"stack-traces",  'k', NULL,   0, "Print the execution stack trace of the traced processes after each syscall", 4},
 #endif /* WITH_STACK_UNWINDING */
         {0}
     };

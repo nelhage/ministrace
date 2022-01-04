@@ -183,11 +183,11 @@ def generate_src_files(kernel_version: str, cpu_arch: str,
         print("#define SYSCALLS_ARR_SIZE (MAX_SYSCALL_NUM + 1)\n\n", file=out_header)
 
         # - Macro constants for indexing syscall array -
-        print("/* -- Array index consts (see also header file `/usr/include/x86_64-linux-gnu/asm/unistd_64.h`) -- */", file=out_header)
+        print("/* -- Array index consts (see also header `<arch>-linux-gnu/asm/unistd_64.h`, e.g., for amd64 `/usr/include/x86_64-linux-gnu/asm/unistd_64.h`) -- */", file=out_header)
         for num in sorted(syscalls_parsed_from_tbl.keys()):
             syscall_name = syscalls_parsed_from_tbl[num].name
             syscall_abi = syscalls_parsed_from_tbl[num].abi
-            print(f"#define {generate_syscall_macro_name(syscall_name, syscall_abi)} {num}", file=out_header)
+            print(f"#define {generate_syscall_macro_name(syscall_name, syscall_abi).ljust(30)} {num}", file=out_header)
 
         print("\n", file=out_header)
 

@@ -9,9 +9,10 @@
  *
  *
  *  KNOWN ISSUES:
+ *     - execve(2) offset calculation is off when passing CLI options together (e.g., -fk) (causes app to SEGFAULT) ==> Hence options must be passed seperately
  *     - Applications:
  *       - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs -> uid issue ??)
- *        Console: [1]  + 48133 suspended (signal)  wireshark
+ *           Console: [1]  + 48133 suspended (signal)  wireshark
  *      - Running `firefox` w/ follow flag crashes (./src/ministrace -f firefox)
  */
 #include <unistd.h>
