@@ -108,10 +108,17 @@ static void _fprint_str_esc(FILE *stream, char *str) {
 
 /* - Misc. - */
 void syscalls_print_all(void) {
+    printf("%4s\t%20s\t%3s\t%s\n", "nr", "name", "nargs", "arg types (0-5)");
+    printf("%4s\t%20s\t%3s\t%s\n", "--", "----", "-----", "---------------");
+
     for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
         const syscall_entry* const scall = &syscalls[i];
         if (NULL != scall->name) {
-            printf("\t%d: %s\n", i, scall->name);
+            printf("%4d\t%20s\t%3d\t", i, scall->name, scall->nargs);
+            for (int j = 0; j < SYSCALL_MAX_ARGS; j++) {
+                printf("%8s ", arg_type_enum_to_str(scall->args[j]));
+            }
+            printf("\n");
         }
     }
 }
