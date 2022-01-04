@@ -20,11 +20,12 @@ set(COMPILE_OPTIONS
 
 # -- CMake options --
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
-option(PRINT_STRINGS "Print string instead of pointer (e.g., in `read` syscall); Note: Disabling this option improves performance" OFF)
+option(PRINT_COMPLETE_STRING_ARGS "Print complete string args (instead of shortening them for better performance)" OFF)
 option(WITH_STACK_UNWINDING "Stack unwinding option -k" OFF)
 
-if (PRINT_STRINGS)
-    list(APPEND COMPILE_OPTIONS "-DPRINT_STRINGS")
+if (PRINT_COMPLETE_STRING_ARGS)
+    list(APPEND COMPILE_OPTIONS
+                "-DPRINT_COMPLETE_STRING_ARGS")
 endif()
 
 if (WITH_STACK_UNWINDING)

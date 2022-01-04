@@ -1,4 +1,7 @@
+#include <ctype.h>
+#include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../../common/error.h"
@@ -8,15 +11,8 @@
 #include "syscalls.h"
 
 
-#ifdef PRINT_STRINGS
-#  include <ctype.h>
-#  include <locale.h>
-#  include <stdlib.h>
-
 /* -- Function prototypes -- */
 static void _fprint_str_esc(FILE* restrict stream, char *str);
-#endif /* PRINT_STRINGS */
-
 static inline long _from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs, int which);
 
 
@@ -62,7 +58,6 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
             case ARG_INT:
                 fprintf(stderr, "%ld", arg);
                 break;
-#ifdef PRINT_STRINGS
             case ARG_STR: {
                 char* strval = ptrace_read_string(tid, arg);
 
@@ -72,7 +67,6 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
                 free(strval);
                 break;
             }
-#endif /* PRINT_STRINGS */
             default:    /* e.g., ARG_PTR */
                 fprintf(stderr, "0x%lx", (unsigned long)arg);
                 break;
@@ -95,7 +89,6 @@ static inline long _from_regs_struct_get_syscall_arg(struct user_regs_struct_ful
     }
 }
 
-#ifdef PRINT_STRINGS
 /*
  * Prints ASCII control chars in `str` using a hex representation
  */
@@ -111,7 +104,6 @@ static void _fprint_str_esc(FILE *stream, char *str) {
         }
     }
 }
-#endif /* PRINT_STRINGS */
 
 
 /* - Misc. - */

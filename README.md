@@ -16,6 +16,7 @@ detail how it works.
 
 ### 1.1. Version history
 * v2: Adds support for &mldr;
+  * passing signals to tracee(s)
   * tracing multi-threaded programs
   * attaching to already running processes
   * stack unwinding
