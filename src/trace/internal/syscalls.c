@@ -108,7 +108,7 @@ static void _fprint_str_esc(FILE *stream, char *str) {
 
 /* - Misc. - */
 void syscalls_print_all(void) {
-    printf("%4s\t%20s\t%3s\t%s\n", "nr", "name", "nargs", "arg types (0-5)");
+    printf("%4s\t%20s\t%3s\targ types (0-%d)\n", "nr", "name", "nargs", SYSCALL_MAX_ARGS - 1);
     printf("%4s\t%20s\t%3s\t%s\n", "--", "----", "-----", "---------------");
 
     for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {

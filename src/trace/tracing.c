@@ -124,10 +124,10 @@ int do_tracer(const pid_t tracee_pid,
         /*   -> Thread terminated (indicated via negative int) */
         if (0 > status_tid) {
             if (-(tracee_pid) == status_tid) {
-                LOG_DEBUG("Main thread %d exited, stopping tracing ...", -(status_tid));
+                fprintf(stderr, "\n+++ [%d] (parent) terminated +++\n", -(status_tid));
                 break;
             } else {
-                LOG_DEBUG("Child thread %d exited, continuing ...", -(status_tid));
+                fprintf(stderr, "\n+++ [%d] (child) terminated +++\n", -(status_tid));
 
                 cur_tid = -1;
                 continue;
@@ -135,7 +135,6 @@ int do_tracer(const pid_t tracee_pid,
 
         /*   -> Thread stopped (i.e., hit breakpoint; indicated via positive int) */
         } else {
-            LOG_DEBUG("Thread %d hit breakpoint ...", status_tid);
             cur_tid = status_tid;
 
             struct user_regs_struct_full regs;
@@ -146,14 +145,14 @@ int do_tracer(const pid_t tracee_pid,
             const char* scall_name = NULL;
             if (!(scall_name = syscalls_get_name(syscall_nr))) {
                 LOG_DEBUG("Unknown syscall w/ nr %ld", syscall_nr);
-                static char fallback_generic_syscall_name[128];     // Warning: Not thread-safe
+                static char fallback_generic_syscall_name[128];
                 snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
                 scall_name = fallback_generic_syscall_name;
             }
 
             /* >> Syscall ENTER: Print syscall-nr + -args << */
             if (!SYSCALL_RETED(regs)) {
-                LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
+                // LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
 
                 if (follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
@@ -169,7 +168,7 @@ int do_tracer(const pid_t tracee_pid,
 
             /* >> Syscall EXIT: Print syscall return value (+ optionally stacktrace) << */
             } else {
-                LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
+                // LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
 
                 if (follow_fork) {      /* For task identification (in log) when following `clone`s */
                     fprintf(stderr, "\n... [%d - %s (%d)]",
@@ -262,37 +261,38 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
              *                (due to by tracer set `PTRACE_O_TRACESYSGOOD` option))
              */
             if ((SIGTRAP | PTRACE_TRAP_INDICATOR_BIT) == stopsig) {
-                return wait_tid;       /* Child was stopped (due to syscall breakpoint) -> extract syscall info */
+                return wait_tid;       /* Child was stopped (due to syscall breakpoint) -> get syscall info */
 
-                /* (II) `PTRACE_EVENT_xxx` stops
-                 *      Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
-                 *                 `WSTOPSIG(status)` returns `SIGTRAP`)
-                 */
+            /* (II) `PTRACE_EVENT_xxx` stops
+             *      Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
+             *                 `WSTOPSIG(status)` returns `SIGTRAP`)
+             */
             } else if (SIGTRAP == stopsig) {
                 // ... Check for ptrace-events here ...
 
-                /* (III) Group-stops
-                 *    ELUCIDATION:
-                 *      - `PTRACE_GETSIGINFO`: Retrieve information about the signal that
-                 *                             caused the stop; copies a `siginfo_t` structure
-                 *                             from the tracee to the address data in the tracer
-                 */
+            /* (III) Group-stops
+             *    ELUCIDATION:
+             *      - `PTRACE_GETSIGINFO`: Retrieve information about the signal that
+             *                             caused the stop; copies a `siginfo_t` structure
+             *                             from the tracee to the address data in the tracer
+             */
             } else if (ptrace(PTRACE_GETSIGINFO, wait_tid, 0, &si) < 0) {
                 // ...
 
-                /*
-                 * (IV) Signal-delivery stops
-                 */
+            /*
+             * (IV) Signal-delivery stops
+             */
             } else {
+                fprintf(stderr, "\n+++ [%d] received (not delivered yet) signal \"%s\" +++\n", tid, strsignal(stopsig));
                 sig = stopsig;
             }
 
 
-            /* (2.2) Possibility 2: Child terminated
-             *   - Possible reasons:
-             *     (I)   Child exited w/ `exit`     (check via `WIFEXITED(status)`)
-             *     (II)  Child exited due to signal (check via `WIFSIGNALED(status)`)
-             */
+        /* (2.2) Possibility 2: Child terminated
+         *   - Possible reasons:
+         *     (I)   Child exited w/ `exit`     (check via `WIFEXITED(status)`)
+         *     (II)  Child exited due to signal (check via `WIFSIGNALED(status)`)
+         */
         } else {
             if (WIFEXITED(status)) {
                 *exit_status = WEXITSTATUS(status);
