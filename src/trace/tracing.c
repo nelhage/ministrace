@@ -151,7 +151,7 @@ int do_tracer(const pid_t tracee_pid,
 
             const char* scall_name = NULL;
             if (!(scall_name = syscalls_get_name(syscall_nr))) {
-                LOG_DEBUG("Unknown syscall w/ nr %ld", syscall_nr);
+                LOG_WARN("Unknown syscall w/ nr %ld", syscall_nr);
                 static char fallback_generic_syscall_name[128];
                 snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
                 scall_name = fallback_generic_syscall_name;
