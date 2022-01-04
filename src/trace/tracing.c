@@ -113,6 +113,13 @@ int do_tracer(const pid_t tracee_pid,
     ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions);
 
 
+#ifdef WITH_STACK_UNWINDING
+    if (print_stacktrace) {
+        unwind_init();
+    }
+#endif /* WITH_STACK_UNWINDING */
+
+
 /* 1. Trace */
     int tracee_exit_status = -1;
     pid_t cur_tid = tracee_pid;
@@ -179,12 +186,20 @@ int do_tracer(const pid_t tracee_pid,
 
 #ifdef WITH_STACK_UNWINDING
                 if (print_stacktrace) {
-                    print_backtrace_of_tracee(cur_tid);
+                    unwind_print_backtrace_of_pid(cur_tid);
                 }
 #endif /* WITH_STACK_UNWINDING */
             }
         }
     }
+
+
+#ifdef WITH_STACK_UNWINDING
+    if (print_stacktrace) {
+        unwind_fin();
+    }
+#endif /* WITH_STACK_UNWINDING */
+
 
     return tracee_exit_status;
 }

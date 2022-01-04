@@ -1,3 +1,5 @@
+// See https://github.com/strace/strace/blob/master/src/unwind-libunwind.c
+
 #define UNW_REMOTE_ONLY
 #include <libunwind-ptrace.h>
 #include <libiberty/demangle.h>								/* or g++ header `cxxabi.h` using `abi::__cxa_demangle` */
@@ -9,33 +11,74 @@
 #include "unwind.h"
 
 
-void print_backtrace_of_tracee(pid_t pid) {
-      /* Create a new unwind address-space representing the target process
-       *  Gets initialized w/
-       *    - `ap` pointer (= set of callback routines to access information required to unwind a chain of stackframes) +
-       *    - specified byteorder (`0` = default byte-order of unwind target))
-       */
-    unw_addr_space_t as = unw_create_addr_space(&_UPT_accessors, 0);
+/* -- Macros -- */
+#define MAX_STACKTRACE_DEPTH 64
 
 
+/* -- Globals -- */
+static unw_addr_space_t unw_as;
+
+
+/* -- Functions -- */
+void unwind_init(void) {
+    /* unw_create_addr_space(3): Create a new remote unwind address-space
+     *  Gets initialized w/
+     *    - `ap` pointer (= set of callback routines to access information required to unwind a chain of stackframes) +
+     *    - specified byteorder (`0` = default byte-order of unwind target))
+     */
+    unw_as = unw_create_addr_space(&_UPT_accessors, 0);
+    if (!unw_as) {
+        LOG_ERROR_AND_EXIT("Failed to create address space for stack tracing");
+    }
+
+    /*
+     * unw_set_caching_policy(3): Sets the caching policy of address space, may be either ...
+     *   - UNW_CACHE_NONE, UNW_CACHE_GLOBAL, UNW_CACHE_PER_THREAD
+     *   WARNING: Caching requires appropriate calls to unw_flush_cache() to ensure cache validity
+     */
+    // unw_set_caching_policy(unw_as, UNW_CACHE_GLOBAL);
+}
+
+void unwind_fin(void) {
+    unw_destroy_addr_space (unw_as);        // ?? TODO: Necessary ??
+}
+
+
+
+void unwind_print_backtrace_of_pid(pid_t pid) {
+    if (!unw_as) {
+        LOG_ERROR_AND_EXIT("Not init yet");
+    }
+
+
+/* -- TCB ?? init -- */
     /* Create new context ?? */
     void *context = _UPT_create(pid);
+
 
     /*
      * unw_init_remote(3): Initialize unwind cursor
      *   - pointed to by `cursor` for unwinding the created
-     *   - address space identified by `as`;
+     *   - address space identified by `unw_as`;
      *   - `context` void-pointer tells the address space exactly what entity should be unwound
      */
     unw_cursor_t cursor;
-    if (0 > unw_init_remote(&cursor, as, context)) {
-        LOG_ERROR_AND_EXIT("Unwinding init failed");
+    if (0 > unw_init_remote(&cursor, unw_as, context)) {
+        LOG_ERROR_AND_EXIT("Cannot initialize libunwind");
     }
 
 
+/* -- Print frames in execution stack of process -- */
+#ifdef MAX_STACKTRACE_DEPTH
+    int stack_depth = 0;
+#endif /* MAX_STACKTRACE_DEPTH */
     do {
+#ifdef MAX_STACKTRACE_DEPTH
+        if (stack_depth++ >= MAX_STACKTRACE_DEPTH) break;
+#endif /* MAX_STACKTRACE_DEPTH */
+
     /* -- $$$   TODO: Print so path  (<path>)  $$$ --  */
-        fprintf(stderr, "> ");
+        fprintf(stderr, " > ");
 
 
     /* -- Print function + offset in function --  */
@@ -70,7 +113,7 @@ void print_backtrace_of_tracee(pid_t pid) {
          */
         unw_word_t pc = 0;
         if (0 > unw_get_reg(&cursor, UNW_REG_IP, &pc)) {
-            LOG_ERROR_AND_EXIT("Reading IP register failed");
+            LOG_ERROR_AND_EXIT("Cannot walk the stack of process %d", pid);
         }
         fprintf(stderr, " [0x%lx]\n", pc);
 
@@ -80,6 +123,7 @@ void print_backtrace_of_tracee(pid_t pid) {
      */
     } while (unw_step(&cursor) > 0);
 
-    /* Destroy context ?? */
+
+/* -- tcb_fin ?? (Destroy unwinding context of process) -- */
     _UPT_destroy(context);
 }
