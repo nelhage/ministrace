@@ -43,7 +43,7 @@
 #    define SYSCALL_REG_ARG3(regss)   (regss.esi)
 #    define SYSCALL_REG_ARG4(regss)   (regss.edi)
 #    define SYSCALL_REG_ARG5(regss)   (regss.ebp)
-#    define SYSCALL_RETED(regss)      (regss.eax != ((unsigned long)-38))		// $$ TODO: CHECK WHETHER CORRECT $$
+#    define SYSCALL_RETED(regss)      (regss.eax != ((unsigned long)-38))    // $$ TODO: CHECK WHETHER CORRECT $$
 # endif
 
 
@@ -52,16 +52,16 @@
 //
 // /* - Types - */
 // struct user_regs_struct_full {
-// 	__extension__ union {                  /* `__extension__` to disable anonymous struct/union warning */
-// 		struct user_regs_struct user_regs;   /* Required to ensure correct alignment ?? */
-// 		struct {                             /* Use anonymous union + -struct to access elements as if they were direct members of `user_regs_struct_full` struct */
-//   		unsigned long long regs[31];       /* x0 - x30 */
-//   		unsigned long long sp;
-//   		unsigned long long pc;
-//   		unsigned long long pstate;         /* cpsr */
-// 		};
-// 	};
-// 	int syscallno;
+//   __extension__ union {                  /* `__extension__` to disable anonymous struct/union warning */
+//     struct user_regs_struct user_regs;   /* Required to ensure correct alignment ?? */
+//     struct {                             /* Use anonymous union + -struct to access elements as if they were direct members of `user_regs_struct_full` struct */
+//       unsigned long long regs[31];       /* x0 - x30 */
+//       unsigned long long sp;
+//       unsigned long long pc;
+//       unsigned long long pstate;         /* cpsr */
+//     };
+//   };
+//   int syscallno;
 // };
 //
 // #define NO_SYSCALL (-1)

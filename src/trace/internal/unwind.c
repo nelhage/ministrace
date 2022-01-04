@@ -1,8 +1,11 @@
-// See https://github.com/strace/strace/blob/master/src/unwind-libunwind.c
+// For an usage example, see
+//     - https://github.com/strace/strace/blob/master/src/unwind-libunwind.c
+//     - https://github.com/strace/strace/blob/master/src/unwind-libdw.c
+//     - attic/examples/stack_trace.c
 
 #define UNW_REMOTE_ONLY
 #include <libunwind-ptrace.h>
-#include <libiberty/demangle.h>								/* or g++ header `cxxabi.h` using `abi::__cxa_demangle` */
+#include <libiberty/demangle.h>                /* or g++ header `cxxabi.h` using `abi::__cxa_demangle` */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,16 +95,16 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
         char symbol_buf[4096];
         if (!unw_get_proc_name(&cursor, symbol_buf, sizeof(symbol_buf), &offset)) {
             char *symbol = symbol_buf;
-     	    if (!(symbol = cplus_demangle(symbol_buf, 0))) {
-      	        symbol = symbol_buf;
-    	    }
+            if (!(symbol = cplus_demangle(symbol_buf, 0))) {
+                symbol = symbol_buf;
+            }
 
             fprintf(stderr, "(%s+0x%lx)", symbol, offset);
-            if (symbol_buf != symbol) {													// $$$$$$$$$$$$$$$$$$$ TODO: `free` seems to be necessary (dyn. all. mem.) $$$$$$$$$$$$$$$$$$$
-				// fprintf(stderr, "\n\n ---> %s\n\n", symbol);
-				free(symbol);
-				symbol = NULL;
-			}
+            if (symbol_buf != symbol) {
+                // fprintf(stderr, "\n\n ---> %s\n\n", symbol);
+                free(symbol);
+                symbol = NULL;
+            }
         } else {
             fprintf(stderr, "(-- found no symbol)");
         }
@@ -109,13 +112,13 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
 
     /* -- Print IP -- */
         /*
-         * unw_get_reg(3): Read the value of register `reg` in stackframe identified by `cursor` and store its value in the word pointed to by `pc`
+         * unw_get_reg(3): Read the value of register `reg` in stackframe identified by `cursor` and store its value in the word pointed to by `ip`
          */
-        unw_word_t pc = 0;
-        if (0 > unw_get_reg(&cursor, UNW_REG_IP, &pc)) {
+        unw_word_t ip = 0;
+        if (0 > unw_get_reg(&cursor, UNW_REG_IP, &ip)) {
             LOG_ERROR_AND_EXIT("Cannot walk the stack of process %d", pid);
         }
-        fprintf(stderr, " [0x%lx]\n", pc);
+        fprintf(stderr, " [0x%lx]\n", ip);
 
 
     /*
