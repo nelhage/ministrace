@@ -46,7 +46,7 @@ endif()
 
 # -- Build targets/commands --
 # - Parse syscalls + generate source -
-set(GEN_SYSCALLS_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/gen_syscalls.py")
+set(GEN_SYSCALLS_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/build/gen_syscalls.py")
 set(GEN_SYSCALLS_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 find_package(PythonInterp 3.4 REQUIRED)
