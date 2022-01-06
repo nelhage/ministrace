@@ -1,12 +1,15 @@
 
 # -- Variables --
 set(HEADERS
+        common/error.h
+        common/string_utils.h
         trace/internal/arch/ptrace_utils.h
         trace/internal/ptrace_utils.h
         trace/internal/syscalls.h
         trace/tracing.h
         cli.h)
 set(SOURCES
+        common/string_utils.c
         trace/internal/arch/ptrace_utils.c
         trace/internal/ptrace_utils.c
         trace/internal/syscalls.c

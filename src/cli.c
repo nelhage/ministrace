@@ -6,26 +6,13 @@
 #include <errno.h>
 
 #include "cli.h"
+#include "common/string_utils.h"
 #include "trace/internal/syscalls.h"
 
 
 /* -- Functions -- */
 bool __arg_was_passed_as_single_arg(char* arg) {
     return !strncmp("-", arg, strlen("-"));   /* CLI arg+option can be 1 arg when passed as `arg=val` or 2 when `arg val` */
-}
-
-int __str_to_long(char* str, long* num) {
-    char *parse_end_ptr = NULL;
-    if (NULL != (parse_end_ptr = str) && NULL != num) {
-        char *p_end_ptr = NULL;
-        const long parsed_number = (int)strtol(parse_end_ptr, &p_end_ptr, 10);
-
-        if (parse_end_ptr != p_end_ptr && ERANGE != errno) {
-            *num = parsed_number;
-            return 0;
-        }
-    }
-    return -1;
 }
 
 
@@ -48,7 +35,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'n':
             {
                 long parsed_syscall_nr = -1;
-                if (__str_to_long(arg, &parsed_syscall_nr) < 0) {
+                if (str_to_long(arg, &parsed_syscall_nr) < 0) {
                     argp_usage(state);
                 }
 
@@ -77,7 +64,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'p':
             {
                 long parsed_attach_pid = -1;
-                if (__str_to_long(arg, &parsed_attach_pid) < 0) {
+                if (str_to_long(arg, &parsed_attach_pid) < 0) {
                     argp_usage(state);
                 }
 
