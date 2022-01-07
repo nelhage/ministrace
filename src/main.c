@@ -39,7 +39,11 @@ int main(int argc, char **argv) {
 
 /* Option 2a: Attach to existing process */
     } else if (-1 != parsed_cli_args.attach_to_process) {
-        return do_tracer(parsed_cli_args.attach_to_process, true, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork
+        return do_tracer(parsed_cli_args.attach_to_process,
+                         true,
+                         parsed_cli_args.pause_on_scall_nr,
+                         (parsed_cli_args.trace_only_syscall_subset) ? (parsed_cli_args.to_be_traced_syscall_subset) : (NULL),
+                         parsed_cli_args.follow_fork
 #ifdef WITH_STACK_UNWINDING
                            , parsed_cli_args.print_stack_traces
 #endif /* WITH_STACK_UNWINDING */
@@ -55,7 +59,11 @@ int main(int argc, char **argv) {
         pid_t pid = DIE_WHEN_ERRNO(fork());
         return (!pid) ?
                (do_tracee(argc - child_args_offset, argv + child_args_offset)) :
-               (do_tracer(pid, false, parsed_cli_args.pause_on_scall_nr, parsed_cli_args.follow_fork
+               (do_tracer(pid,
+                          false,
+                          parsed_cli_args.pause_on_scall_nr,
+                          (parsed_cli_args.trace_only_syscall_subset) ? (parsed_cli_args.to_be_traced_syscall_subset) : (NULL),
+                          parsed_cli_args.follow_fork
 #ifdef WITH_STACK_UNWINDING
                         , parsed_cli_args.print_stack_traces
 #endif /* WITH_STACK_UNWINDING */

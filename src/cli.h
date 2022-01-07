@@ -6,6 +6,8 @@
 
 #include <sys/types.h>
 
+#include "generated/syscallents.h"
+
 
 /* -- Types -- */
 typedef struct cli_args {
@@ -16,6 +18,10 @@ typedef struct cli_args {
 #ifdef WITH_STACK_UNWINDING
     bool print_stack_traces;
 #endif /* WITH_STACK_UNWINDING */
+
+    bool trace_only_syscall_subset;
+    bool to_be_traced_syscall_subset[SYSCALLS_ARR_SIZE];
+
     int exec_arg_offset;
 } cli_args;
 

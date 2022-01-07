@@ -56,6 +56,7 @@ int do_tracee(int argc, char **argv) {
 int do_tracer(const pid_t tracee_pid,
               const bool attach_to_tracee,
               const long pause_on_syscall_nr,
+              const bool* const to_be_traced_syscall_subset,
               const bool follow_fork
 #ifdef WITH_STACK_UNWINDING
             , const bool print_stacktrace
@@ -147,6 +148,10 @@ int do_tracer(const pid_t tracee_pid,
 
             const long syscall_nr = SYSCALL_REG_CALLNO(regs);
 
+            if (to_be_traced_syscall_subset && !to_be_traced_syscall_subset[syscall_nr]) {   // Syscall shall NOT be traced
+                continue;
+            }
+
             const char* scall_name = NULL;
             if (!(scall_name = syscalls_get_name(syscall_nr))) {
                 LOG_WARN("Unknown syscall w/ nr %ld", syscall_nr);
@@ -191,16 +196,15 @@ int do_tracer(const pid_t tracee_pid,
         }
     }
 
-
 #ifdef WITH_STACK_UNWINDING
     if (print_stacktrace) {
         unwind_fin();
     }
 #endif /* WITH_STACK_UNWINDING */
 
-
     return tracee_exit_status;
 }
+
 
 void _wait_for_user_input(void) {
     int c;

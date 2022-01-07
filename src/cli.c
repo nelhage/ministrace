@@ -1,6 +1,7 @@
 #include <argp.h>
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
@@ -69,12 +70,43 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             break;
 
 #ifdef WITH_STACK_UNWINDING
-        /* Print stack when printing syscall */
+    /* Print stack when printing syscall */
         case 'k':
             arguments->print_stack_traces = true;
             arguments->exec_arg_offset++;
             break;
 #endif /* WITH_STACK_UNWINDING */
+
+    /* Trace only subset of syscalls */
+        case 'e':
+            {
+                arguments->trace_only_syscall_subset = true;
+                memset(arguments->to_be_traced_syscall_subset, 0,
+                       SYSCALLS_ARR_SIZE * sizeof(*(arguments->to_be_traced_syscall_subset)));
+
+                if (strchr(arg, ',')) {
+                    char* arg_copy = strdup(arg);
+
+                    char* pch = NULL;
+                    while ((pch = strtok((!pch) ? (arg_copy) : (NULL), ","))) {
+                        const long scall_nr = syscalls_get_nr(pch);
+                        if (-1 == scall_nr) {
+                            argp_usage(state);
+                        }
+                        arguments->to_be_traced_syscall_subset[scall_nr] = true;
+                    }
+
+                    free(arg_copy);
+                } else {
+                    const long scall_nr = syscalls_get_nr(arg);
+                    if (-1 == scall_nr) {
+                        argp_usage(state);
+                    }
+                    arguments->to_be_traced_syscall_subset[scall_nr] = true;
+                }
+                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            }
+            break;
 
         case ARGP_KEY_ARG:
           /* Too many arguments */
@@ -98,14 +130,15 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
     static const struct argp_option cli_options[] = {
-        {"list-syscalls", 'l', NULL,   0, "List supported syscalls", 0},
-        {"attach",        'p', "pid",  0, "Attach to already running process", 1},
-        {"follow-forks",  'f', NULL,   0, "Follow `fork`ed child processes", 2},
-        {"pause-snr",     'n', "nr",   0, "Pause on specified syscall nr", 3},
-        {"pause-sname",   'a', "name", 0, "Pause on specified syscall name", 3},
+        {"list-syscalls", 'l', NULL,          0, "List supported system calls", 0},
+        {"attach",        'p', "pid",         0, "Attach to already running process", 1},
+        {"follow-forks",  'f', NULL,          0, "Follow `fork`ed child processes", 2},
+        {"pause-snr",     'n', "nr",          0, "Pause on specified system call nr", 3},
+        {"pause-sname",   'a', "name",        0, "Pause on specified system call name", 3},
 #ifdef WITH_STACK_UNWINDING
-        {"stack-traces",  'k', NULL,   0, "Print the execution stack trace of the traced processes after each syscall", 4},
+        {"stack-traces",  'k', NULL,   0, "Print the execution stack trace of the traced processes after each system call", 4},
 #endif /* WITH_STACK_UNWINDING */
+        {"trace",         'e', "syscall_set", 0, "Trace only the specified (as comma-list seperated) set of system calls", 4},
         {0}
     };
 
@@ -118,6 +151,7 @@ void parse_cli_args(int argc, char** argv,
 #endif /* WITH_STACK_UNWINDING */
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
     parsed_cli_args_ptr->exec_arg_offset = 0;
+    parsed_cli_args_ptr->trace_only_syscall_subset = false;
 
     static const struct argp argp = {
         cli_options, parse_cli_opt,
