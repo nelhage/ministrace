@@ -1,3 +1,5 @@
+// Example of static lookup table
+
 #ifndef IOTRACE_H
 #define IOTRACE_H
 

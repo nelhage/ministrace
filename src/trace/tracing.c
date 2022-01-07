@@ -148,8 +148,8 @@ int do_tracer(const pid_t tracee_pid,
 
             const long syscall_nr = SYSCALL_REG_CALLNO(regs);
 
-            if (to_be_traced_syscall_subset && !to_be_traced_syscall_subset[syscall_nr]) {   // Syscall shall NOT be traced
-                continue;
+            if (to_be_traced_syscall_subset && !to_be_traced_syscall_subset[syscall_nr]) {
+                continue;   /* Current "trapped" syscall shall not be traced -> don't print it */
             }
 
             const char* scall_name = NULL;

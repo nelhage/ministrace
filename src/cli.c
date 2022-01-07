@@ -136,7 +136,7 @@ void parse_cli_args(int argc, char** argv,
         {"pause-snr",     'n', "nr",          0, "Pause on specified system call nr", 3},
         {"pause-sname",   'a', "name",        0, "Pause on specified system call name", 3},
 #ifdef WITH_STACK_UNWINDING
-        {"stack-traces",  'k', NULL,   0, "Print the execution stack trace of the traced processes after each system call", 4},
+        {"stack-traces",  'k', NULL,          0, "Print the execution stack trace of the traced processes after each system call", 4},
 #endif /* WITH_STACK_UNWINDING */
         {"trace",         'e', "syscall_set", 0, "Trace only the specified (as comma-list seperated) set of system calls", 4},
         {0}
