@@ -1,8 +1,13 @@
 // Source: https://gist.github.com/banthar/1343977
 // stack_trace.c
 //
+// See also
+//   https://github.com/strace/strace/blob/master/src/unwind-libdw.c
+//   https://github.com/ganboing/elfutils/tree/master/libdwfl
+
 // Install dependencies: sudo apt install libunwind-dev libdw-dev -y
 // Compile:              gcc stack_trace.c -ldw -lunwind -g -o stack_trace
+
 
 #define UNW_LOCAL_ONLY
 
@@ -22,38 +27,47 @@
 
 
 
-static void debug_info(FILE* out, const void* ip) {
-  char *debuginfo_path = NULL;
+static void debug_info(FILE* out, const void* ip, pid_t pid) {
 
+/* -- 0. Init -- */
+  // char *debuginfo_path = NULL;
   Dwfl_Callbacks callbacks = {
     .find_elf = dwfl_linux_proc_find_elf,
     .find_debuginfo = dwfl_standard_find_debuginfo,
-    .debuginfo_path = &debuginfo_path,
+    // .debuginfo_path = &debuginfo_path
   };
-
   Dwfl* dwfl = dwfl_begin(&callbacks);
-  assert(dwfl != NULL);
+  assert(NULL != dwfl);
 
-  assert(dwfl_linux_proc_report (dwfl, getpid()) == 0);
-  assert(dwfl_report_end (dwfl, NULL, NULL) == 0);
+  assert(!dwfl_linux_proc_report (dwfl, pid));
+  assert(!dwfl_report_end (dwfl, NULL, NULL));
+
+
+  // int r = dwfl_linux_proc_attach(dwfl, tcp->pid, true); // cleanup on failure !
+
 
   Dwarf_Addr addr = (uintptr_t)ip;
-
   Dwfl_Module* module = dwfl_addrmodule (dwfl, addr);
 
+/* -- Get function name -- */
   const char* function_name = dwfl_module_addrname(module, addr);
+  fprintf(out, "%s(", function_name);
 
-  fprintf(out, "%s(",function_name);
 
   Dwfl_Line *line = dwfl_getsrc (dwfl, addr);
-  if(line != NULL) {
+  if (NULL != line) {
     int nline;
     Dwarf_Addr addr;
     const char* filename = dwfl_lineinfo (line, &addr, &nline, NULL, NULL, NULL);
-    fprintf(out, "%s:%d", strrchr(filename,'/') +1, nline);
+    fprintf(out, "%s:%d", /*strrchr(filename,'/') +1*/ filename, nline);
   } else {
-    fprintf(out,"%p",ip);
+    // fprintf(out,"%p", ip);
+    // Here's how to get the .so name when the file name is not available:
+    const char *module_name = dwfl_module_info(module, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    fprintf(out, "in %s", module_name);
   }
+
+  dwfl_end(dwfl);
 }
 
 
@@ -70,19 +84,22 @@ static void __attribute__((noinline)) print_stacktrace(FILE* out, int skip) {
     unw_word_t ip;
     unw_get_reg(&cursor, UNW_REG_IP, &ip);
 
-/* -- Get name of function which created stackframe -- */
+/* ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- */
+    if (skip <= 0) {
+      fprintf(out, "\tat ");
+  /* -- Get function-name + filename + line-nr -- */
+      debug_info(out, (void*)(ip - 4), getpid());
+      fprintf(out, ")\n");
+    }
+/* ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- */
+
+
+  /* -- Get name of function (which created stackframe) -- */
     unw_word_t offset;
     char name[32];
-    assert(unw_get_proc_name(&cursor, name,sizeof(name), &offset) == 0);
+    assert(unw_get_proc_name(&cursor, name, sizeof(name), &offset) == 0);
 
-    if (skip <= 0) {
-      fprintf(out,"\tat ");
-      debug_info(out,(void*)(ip-4));
-      fprintf(out,")\n");
-    }
-
-    if(strcmp(name, "main") == 0)
-      break;
+    if (strcmp(name, "main") == 0) break;
 
     skip--;
   }
@@ -108,26 +125,3 @@ void a(void) {
 int main(int argc, char*argv[]) {
   a();
 }
-
-
-
-
-
-/*
-andrewrk commented on 31 Jul 2015
-
-Yes thank you very much for this snippet.
-
-Here's how to get the .so name when the file name is not available:
-
---- stacktrace.c    2015-07-31 00:08:16.844089668 -0700
-+++ stacktrace.c    2015-07-31 00:08:11.280271152 -0700
-@@ -50,7 +50,9 @@
-    } else {
--       fprintf(out,"%p",ip);
-+        const char *module_name = dwfl_module_info(module,
-+                NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-+        fprintf(out, "in %s", module_name);
-    }
- }
-*/
