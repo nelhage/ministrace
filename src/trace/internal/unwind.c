@@ -1,6 +1,7 @@
 // For libdw usage examples / internals, see
 //   https://github.com/strace/strace/blob/master/src/unwind-libdw.c
 //   https://github.com/ganboing/elfutils/tree/master/libdwfl
+// TODO: Performance optimizations (see strace's unwind-libdw.c for example)
 
 
 #define UNW_REMOTE_ONLY
@@ -24,6 +25,10 @@
 static unw_addr_space_t unw_as;
 
 
+/* -- Function prototypes -- */
+Dwfl* _init_ldw_for_proc(pid_t pid);
+
+
 /* -- Functions -- */
 void unwind_init(void) {
     /* unw_create_addr_space(3): Create a new remote unwind address-space
@@ -33,7 +38,7 @@ void unwind_init(void) {
      */
     unw_as = unw_create_addr_space(&_UPT_accessors, 0);
     if (!unw_as) {
-        LOG_ERROR_AND_EXIT("Failed to create address space for stack tracing");
+        LOG_ERROR_AND_EXIT("libunwind init error (failed to create address space for stack tracing)");
     }
 
     /*
@@ -46,25 +51,6 @@ void unwind_init(void) {
 
 void unwind_fin(void) {
     unw_destroy_addr_space (unw_as);        // ?? TODO: Necessary ??
-}
-
-
-Dwfl* _init_ldw_for_proc(pid_t pid) {
-    Dwfl_Callbacks callbacks = {
-        .find_elf = dwfl_linux_proc_find_elf,
-        .find_debuginfo = dwfl_standard_find_debuginfo,
-    };
-
-    Dwfl* dwfl;
-    if ((dwfl = dwfl_begin(&callbacks))          &&
-        !dwfl_linux_proc_attach(dwfl, pid, true) &&
-        !dwfl_linux_proc_report(dwfl, pid)       &&
-        !dwfl_report_end(dwfl, NULL, NULL)) {
-        return dwfl;
-    }
-
-    dwfl_end(dwfl);
-    LOG_ERROR_AND_EXIT("Init error for process %d", pid);
 }
 
 
@@ -85,7 +71,7 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
      */
     unw_cursor_t cursor;
     if (0 > unw_init_remote(&cursor, unw_as, unw_ctx)) {
-        LOG_ERROR_AND_EXIT("Cannot initialize libunwind");
+        LOG_ERROR_AND_EXIT("Context initialization error for libunwind");
     }
 
     Dwfl* dwfl = _init_ldw_for_proc(pid);
@@ -156,4 +142,23 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
 /* -- tcb_fin ?? (Destroy unwinding context of process) -- */
     dwfl_end(dwfl);
     _UPT_destroy(unw_ctx);
+}
+
+
+Dwfl* _init_ldw_for_proc(pid_t pid) {
+    static const Dwfl_Callbacks dwfl_callbacks = {
+        .find_elf = dwfl_linux_proc_find_elf,
+        .find_debuginfo = dwfl_standard_find_debuginfo
+    };
+
+    Dwfl* dwfl;
+    if ((dwfl = dwfl_begin(&dwfl_callbacks))     &&
+        !dwfl_linux_proc_attach(dwfl, pid, true) &&
+        !dwfl_linux_proc_report(dwfl, pid)       &&
+        !dwfl_report_end(dwfl, NULL, NULL)) {
+        return dwfl;
+    }
+
+    dwfl_end(dwfl);
+    LOG_ERROR_AND_EXIT("libdw init error for process %d", pid);
 }

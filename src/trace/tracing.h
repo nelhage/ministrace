@@ -14,5 +14,4 @@ int do_tracer(pid_t pid, bool attach_to_tracee, long pause_on_syscall_nr, bool f
 
 int do_tracee(int argc, char **argv);
 
-
 #endif /* TRACING_H */

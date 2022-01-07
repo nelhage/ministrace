@@ -1,8 +1,8 @@
 /**
  * Functions utilizing `ptrace(2)` which make tracing easier
  */
-#ifndef PTRACE_FCTS_H
-#define PTRACE_FCTS_H
+#ifndef PTRACE_UTILS_H
+#define PTRACE_UTILS_H
 
 #include <stdbool.h>
 #include <unistd.h>
@@ -17,4 +17,4 @@ void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs);
 char *ptrace_read_string(pid_t tid, unsigned long addr);
 
 
-#endif /* PTRACE_FCTS_H */
+#endif /* PTRACE_UTILS_H */

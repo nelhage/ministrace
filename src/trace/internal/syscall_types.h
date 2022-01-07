@@ -32,5 +32,4 @@ static inline const char* arg_type_enum_to_str(arg_type arg) {
 }
 
 
-
 #endif /* SYSCALL_TYPES_H */
