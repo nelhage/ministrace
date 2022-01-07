@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include <stdlib.h>
 #include <errno.h>
 
 #include "cli.h"
@@ -20,7 +19,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
     cli_args *arguments = state->input;
 
     switch(key) {
-    /* List syscalls and exit */
+    /* List syscalls (and exit) */
         case 'l':
             arguments->list_syscalls = true;
             break;

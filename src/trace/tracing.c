@@ -8,7 +8,6 @@
 
 #include "internal/ptrace_utils.h"
 #include "internal/syscalls.h"
-
 #include "tracing.h"
 
 #ifdef WITH_STACK_UNWINDING
@@ -107,7 +106,7 @@ int do_tracer(const pid_t tracee_pid,
     unsigned int ptrace_setoptions = PTRACE_O_TRACESYSGOOD;
     if (follow_fork) {
         ptrace_setoptions |= PTRACE_O_TRACECLONE
-                             | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
+                           | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
     }
     ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions);
 
@@ -205,7 +204,7 @@ int do_tracer(const pid_t tracee_pid,
 
 void _wait_for_user_input(void) {
     int c;
-    while ('\n' != (c = getchar()) && EOF != c) { } // wait until user presses enter to continue
+    while ('\n' != (c = getchar()) && EOF != c) { }     /* Wait until user presses enter to continue */
 }
 
 int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {

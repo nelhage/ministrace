@@ -3,12 +3,10 @@
 //   https://github.com/ganboing/elfutils/tree/master/libdwfl
 // TODO: Performance optimizations (see strace's unwind-libdw.c for example)
 
-
+#include <elfutils/libdwfl.h>
 #define UNW_REMOTE_ONLY
 #include <libunwind-ptrace.h>
 #include <libiberty/demangle.h>                /* or g++ header `cxxabi.h` using `abi::__cxa_demangle` */
-
-#include <elfutils/libdwfl.h>
 
 #include <stdio.h>
 #include <stdlib.h>

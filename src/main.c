@@ -1,32 +1,28 @@
 /*
- * TODOs:
+ * - TODOs:
  *   - Fix arm64 tracing support (current implementation returns wrong syscall nr ??)
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
- *   - Dynamically sized `tmap` (to make hard-coded size / cli arg unnecessary)
  *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap`)
- *
  *   - Do we need PTRACE_DETATCH when using `-p` (i.e., `PTRACE_ATTACH`) option like strace does ??
  *
- *
- *  KNOWN ISSUES:
- *     - execve(2) offset calculation is off when passing CLI options together (e.g., -fk) (causes app to SEGFAULT) ==> Hence options must be passed seperately
- *     - Applications:
- *       - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs -> uid issue ??)
- *           Console: [1]  + 48133 suspended (signal)  wireshark
- *      - Running `firefox` w/ follow flag crashes (./src/ministrace -f firefox)
+ * - Known issues:
+ *   - execve(2) offset calculation is off when passing CLI options together (e.g., -fk) (causes app to SEGFAULT) ==> Hence options must be passed seperately
+ *   - Tracing:
+ *      - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs)
+ *          Console: [1]  + 48133 suspended (signal)  wireshark
+ *      - Running `firefox` w/ follow option (./src/ministrace -f firefox) freezes UI
  */
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
-#include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
+#include "common/error.h"
 #include "cli.h"
 #include "trace/tracing.h"
 #include "trace/internal/syscalls.h"
-
-#include "common/error.h"
 
 
 

@@ -1,4 +1,3 @@
-
 #include <errno.h>
 #include <stdlib.h>
 
@@ -20,11 +19,11 @@ int str_to_long(char* str, long* num) {
 }
 
 
-/* djb2 by Dan Bernstein */
-u_int64_t str_hash(const char *str) {
-    unsigned long hash = 5381;
-    int c;
-
-    while ((c = *str++)) hash = ((hash << 5) + hash) + c;
-    return hash;
-}
+// /* djb2 by Dan Bernstein */
+// u_int64_t str_hash(const char *str) {
+//     unsigned long hash = 5381;
+//     int c;
+//
+//     while ((c = *str++)) hash = ((hash << 5) + hash) + c;
+//     return hash;
+// }

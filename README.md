@@ -21,6 +21,9 @@ detail how it works.
   * attaching to already running processes
   * stack unwinding
 
+### 1.2. TODOs / Known issues
+* See [main.c](src/main.c)
+
 
 ## 2. Compile
 ### 2.1. Prerequisites
