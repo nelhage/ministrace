@@ -1,11 +1,13 @@
-// For an usage example, see
-//     - https://github.com/strace/strace/blob/master/src/unwind-libunwind.c
-//     - https://github.com/strace/strace/blob/master/src/unwind-libdw.c
-//     - attic/examples/stack_trace.c
+// For libdw usage examples / internals, see
+//   https://github.com/strace/strace/blob/master/src/unwind-libdw.c
+//   https://github.com/ganboing/elfutils/tree/master/libdwfl
+
 
 #define UNW_REMOTE_ONLY
 #include <libunwind-ptrace.h>
 #include <libiberty/demangle.h>                /* or g++ header `cxxabi.h` using `abi::__cxa_demangle` */
+
+#include <elfutils/libdwfl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +49,24 @@ void unwind_fin(void) {
 }
 
 
+Dwfl* _init_ldw_for_proc(pid_t pid) {
+    Dwfl_Callbacks callbacks = {
+        .find_elf = dwfl_linux_proc_find_elf,
+        .find_debuginfo = dwfl_standard_find_debuginfo,
+    };
+
+    Dwfl* dwfl;
+    if ((dwfl = dwfl_begin(&callbacks))          &&
+        !dwfl_linux_proc_attach(dwfl, pid, true) &&
+        !dwfl_linux_proc_report(dwfl, pid)       &&
+        !dwfl_report_end(dwfl, NULL, NULL)) {
+        return dwfl;
+    }
+
+    dwfl_end(dwfl);
+    LOG_ERROR_AND_EXIT("Init error for process %d", pid);
+}
+
 
 void unwind_print_backtrace_of_pid(pid_t pid) {
     if (!unw_as) {
@@ -56,9 +76,7 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
 
 /* -- TCB ?? init -- */
     /* Create new context ?? */
-    void *context = _UPT_create(pid);
-
-
+    unw_context_t *unw_ctx = _UPT_create(pid);
     /*
      * unw_init_remote(3): Initialize unwind cursor
      *   - pointed to by `cursor` for unwinding the created
@@ -66,9 +84,11 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
      *   - `context` void-pointer tells the address space exactly what entity should be unwound
      */
     unw_cursor_t cursor;
-    if (0 > unw_init_remote(&cursor, unw_as, context)) {
+    if (0 > unw_init_remote(&cursor, unw_as, unw_ctx)) {
         LOG_ERROR_AND_EXIT("Cannot initialize libunwind");
     }
+
+    Dwfl* dwfl = _init_ldw_for_proc(pid);
 
 
 /* -- Print frames in execution stack of process -- */
@@ -80,8 +100,22 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
         if (stack_depth++ >= MAX_STACKTRACE_DEPTH) break;
 #endif /* MAX_STACKTRACE_DEPTH */
 
-    /* -- $$$   TODO: Print so path  (<path>)  $$$ --  */
-        fprintf(stderr, " > ");
+
+    /* -- Get IP -- */
+        /*
+         * unw_get_reg(3): Read the value of register `reg` in stackframe identified by `cursor` and store its value in the word pointed to by `ip`
+         */
+        unw_word_t ip = 0;
+        if (0 > unw_get_reg(&cursor, UNW_REG_IP, &ip)) {
+            LOG_ERROR_AND_EXIT("Cannot walk the stack of process %d", pid);
+        }
+
+
+    /* -- Get + Print so filename */
+        Dwfl_Module* module = dwfl_addrmodule(dwfl, (uintptr_t)ip);
+        const char *module_name = dwfl_module_info(module, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+        fprintf(stderr, " > %s", /*strrchr(module_name,'/') +1*/ module_name);
 
 
     /* -- Print function + offset in function --  */
@@ -101,7 +135,6 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
 
             fprintf(stderr, "(%s+0x%lx)", symbol, offset);
             if (symbol_buf != symbol) {
-                // fprintf(stderr, "\n\n ---> %s\n\n", symbol);
                 free(symbol);
                 symbol = NULL;
             }
@@ -111,13 +144,6 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
 
 
     /* -- Print IP -- */
-        /*
-         * unw_get_reg(3): Read the value of register `reg` in stackframe identified by `cursor` and store its value in the word pointed to by `ip`
-         */
-        unw_word_t ip = 0;
-        if (0 > unw_get_reg(&cursor, UNW_REG_IP, &ip)) {
-            LOG_ERROR_AND_EXIT("Cannot walk the stack of process %d", pid);
-        }
         fprintf(stderr, " [0x%lx]\n", ip);
 
 
@@ -128,5 +154,6 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
 
 
 /* -- tcb_fin ?? (Destroy unwinding context of process) -- */
-    _UPT_destroy(context);
+    dwfl_end(dwfl);
+    _UPT_destroy(unw_ctx);
 }

@@ -24,7 +24,7 @@ set(COMPILE_OPTIONS
 # -- CMake options --
 set(LINUX_SRC_DIR "/usr/src/linux-5.4.0" CACHE STRING "Location of kernel source used to parse syscalls")
 option(PRINT_COMPLETE_STRING_ARGS "Print complete string args (instead of shortening them for better performance)" OFF)
-option(WITH_STACK_UNWINDING "Stack unwinding option -k" OFF)
+option(WITH_STACK_UNWINDING "Stack unwinding option -k" OFF)            # Requires libunwind-dev & libdw-dev -y
 
 if (PRINT_COMPLETE_STRING_ARGS)
     list(APPEND COMPILE_OPTIONS
@@ -40,7 +40,8 @@ if (WITH_STACK_UNWINDING)
             "-DWITH_STACK_UNWINDING")
     list(APPEND LINK_OPTIONS
             unwind-ptrace unwind-generic
-            iberty)
+            iberty
+            dw)
 endif()
 
 
