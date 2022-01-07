@@ -71,7 +71,7 @@ void unwind_print_backtrace_of_pid(pid_t pid) {
      */
     unw_cursor_t cursor;
     if (0 > unw_init_remote(&cursor, unw_as, unw_ctx)) {
-        LOG_ERROR_AND_EXIT("Context initialization error for libunwind");
+        LOG_ERROR_AND_EXIT("libunwind context initialization error");
     }
 
     Dwfl* dwfl = _init_ldw_for_proc(pid);

@@ -35,11 +35,9 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'n':
             {
                 long parsed_syscall_nr = -1;
-                if (str_to_long(arg, &parsed_syscall_nr) < 0) {
-                    argp_usage(state);
-                }
-
-                if (!syscalls_get_name(parsed_syscall_nr)) {
+                if ((-1 != arguments->pause_on_scall_nr)                  ||
+                    (-1 == str_to_long(arg, &parsed_syscall_nr)) ||
+                    (!syscalls_get_name(parsed_syscall_nr))) {
                     argp_usage(state);
                 }
                 arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
@@ -51,12 +49,12 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'a':
             {
                 long syscall_nr = -1;
-                if (0 <= (syscall_nr = syscalls_get_nr(arg))) {
-                    arguments->pause_on_scall_nr = syscall_nr;
-                    arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
-                    return 0;
+                if ((-1 != arguments->pause_on_scall_nr) ||
+                    (-1 == (syscall_nr = syscalls_get_nr(arg)))) {
+                    argp_usage(state);
                 }
-                argp_usage(state);
+                arguments->pause_on_scall_nr = syscall_nr;
+                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
             }
             break;
 
@@ -64,10 +62,9 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'p':
             {
                 long parsed_attach_pid = -1;
-                if (str_to_long(arg, &parsed_attach_pid) < 0) {
+                if (-1 == str_to_long(arg, &parsed_attach_pid)) {
                     argp_usage(state);
                 }
-
                 arguments->attach_to_process = (pid_t)parsed_attach_pid;
             }
             break;
@@ -101,7 +98,6 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 
 void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
-
     static const struct argp_option cli_options[] = {
         {"list-syscalls", 'l', NULL,   0, "List supported syscalls", 0},
         {"attach",        'p', "pid",  0, "Attach to already running process", 1},

@@ -56,7 +56,8 @@ int do_tracee(int argc, char **argv) {
 /* -- Tracing -- */
 int do_tracer(const pid_t tracee_pid,
               const bool attach_to_tracee,
-              const long pause_on_syscall_nr, const bool follow_fork
+              const long pause_on_syscall_nr,
+              const bool follow_fork
 #ifdef WITH_STACK_UNWINDING
             , const bool print_stacktrace
 #endif /* WITH_STACK_UNWINDING */
@@ -68,8 +69,7 @@ int do_tracer(const pid_t tracee_pid,
 
 /* 0a. Setup: Wait until child stops */
     if (attach_to_tracee) {
-        /*
-         * ELUCIDATION:
+        /* ELUCIDATION:
          *  - `PTRACE_ATTACH`: Attach to process specified by `pid`
          *                     (making it a tracee of the calling process)
          *                     The tracee is sent a `SIGSTOP`, but
@@ -94,8 +94,7 @@ int do_tracer(const pid_t tracee_pid,
 
 
 /* 0b. Setup: Set ptrace options */
-    /*
-     * ELUCIDATION:
+    /* ELUCIDATION:
      *   - `PTRACE_O_TRACESYSGOOD`: Sets bit 7 in the signal number when delivering syscall traps
      *                              (i.e., deliver `SIGTRAP|0x80`) (see `PTRACE_TRAP_INDICATOR_BIT`)
      *                              Makes it easier (for tracer) to distinguish b/w normal- & from syscalls caused traps
@@ -206,7 +205,7 @@ int do_tracer(const pid_t tracee_pid,
 
 void _wait_for_user_input(void) {
     int c;
-    while ( '\n' != (c = getchar()) && EOF != c ) {} // wait until user presses enter to continue
+    while ('\n' != (c = getchar()) && EOF != c) { } // wait until user presses enter to continue
 }
 
 int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
