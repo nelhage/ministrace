@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include "cli.h"
+#include "common/error.h"
 #include "common/string_utils.h"
 #include "trace/internal/syscalls.h"
 
@@ -35,7 +36,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'n':
             {
                 long parsed_syscall_nr = -1;
-                if ((-1 != arguments->pause_on_scall_nr)                  ||
+                if ((-1 != arguments->pause_on_scall_nr)         ||
                     (-1 == str_to_long(arg, &parsed_syscall_nr)) ||
                     (!syscalls_get_name(parsed_syscall_nr))) {
                     argp_usage(state);
@@ -86,6 +87,9 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 
                 if (strchr(arg, ',')) {
                     char* arg_copy = strdup(arg);
+                    if (!arg_copy) {
+                        LOG_ERROR_AND_EXIT("Not enough memory avaialable to duplicate arg-string");
+                    }
 
                     char* pch = NULL;
                     while ((pch = strtok((!pch) ? (arg_copy) : (NULL), ","))) {
