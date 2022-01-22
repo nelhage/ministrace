@@ -189,7 +189,7 @@ int do_tracer(const pid_t tracee_pid,
 
 #ifdef WITH_STACK_UNWINDING
                 if (print_stacktrace) {
-                    unwind_print_backtrace_of_pid(cur_tid);
+                    unwind_print_backtrace_of_tid(cur_tid);
                 }
 #endif /* WITH_STACK_UNWINDING */
             }
