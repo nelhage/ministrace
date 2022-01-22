@@ -146,7 +146,7 @@ int do_tracer(const pid_t tracee_pid,
             struct user_regs_struct_full regs;
             ptrace_get_regs_content(cur_tid, &regs);
 
-            const long syscall_nr = SYSCALL_REG_CALLNO(regs);
+            const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
 
             if (to_be_traced_syscall_subset && !to_be_traced_syscall_subset[syscall_nr]) {
                 continue;   /* Current "trapped" syscall shall not be traced -> don't print it */
@@ -161,7 +161,7 @@ int do_tracer(const pid_t tracee_pid,
             }
 
             /* >> Syscall ENTER: Print syscall-nr + -args << */
-            if (!SYSCALL_RETED(regs)) {
+            if (!USER_REGS_STRUCT_SC_HAS_RTNED(regs)) {
                 // LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
 
                 if (follow_fork) {
@@ -184,7 +184,7 @@ int do_tracer(const pid_t tracee_pid,
                     fprintf(stderr, "\n... [%d - %s (%d)]",
                             cur_tid, scall_name, cur_tid);
                 }
-                const long syscall_rtn_val = SYSCALL_REG_RETURN(regs);
+                const long syscall_rtn_val = USER_REGS_STRUCT_SC_RTNVAL(regs);
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
 #ifdef WITH_STACK_UNWINDING

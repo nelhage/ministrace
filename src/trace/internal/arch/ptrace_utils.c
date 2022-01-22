@@ -15,7 +15,7 @@
 void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
   struct iovec iov = {
     .iov_base = regs,
-    .iov_len = sizeof (struct user_regs_struct_full),
+    .iov_len = sizeof(struct user_regs_struct_full),
   };
 
   errno = 0;
@@ -35,8 +35,8 @@ void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 //     .iov_len = sizeof(regs->user_regs),
 //   };
 //
-//   errno = 0;
 //   /* 1. Get reg contents */
+//   errno = 0;
 //   ptrace(PTRACE_GETREGSET, tid, NT_PRSTATUS, &iov);
 //   if (errno) {
 //     LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);

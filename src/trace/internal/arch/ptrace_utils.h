@@ -1,5 +1,5 @@
 /**
- * CPU architecture specific stuff relevant for `ptrace(2)`
+ * CPU architecture specific stuff relevant for `ptrace`(2)
  *
  * Elucidation:
  *  - The ABI specifies the calling convention used for syscalls
@@ -11,8 +11,8 @@
  *      - syscall nr (on syscall enter) AND
  *      - return value (on syscall exit)
  */
-#ifndef PTRACE_ARCH_H
-#define PTRACE_ARCH_H
+#ifndef PTRACE_UTILS_ARCH_H
+#define PTRACE_UTILS_ARCH_H
 
 #include <sys/user.h>
 
@@ -23,27 +23,31 @@
 /* - Types - */
 #  define user_regs_struct_full user_regs_struct
 
-/* - Registers - */
+/* - Macros for accessing registers (and other information) in `user_regs_struct` - */
 #  ifdef __x86_64__
-#    define SYSCALL_REG_CALLNO(regss) ((const int)(regss.orig_rax))
-#    define SYSCALL_REG_RETURN(regss) (regss.rax)
-#    define SYSCALL_REG_ARG0(regss)   (regss.rdi)
-#    define SYSCALL_REG_ARG1(regss)   (regss.rsi)
-#    define SYSCALL_REG_ARG2(regss)   (regss.rdx)
-#    define SYSCALL_REG_ARG3(regss)   (regss.r10)
-#    define SYSCALL_REG_ARG4(regss)   (regss.r8)
-#    define SYSCALL_REG_ARG5(regss)   (regss.r9)
-#    define SYSCALL_RETED(regss)      (regss.rax != ((unsigned long long)-38))     /* -38 is ENOSYS which is put into RAX as a default return value by the kernel's syscall entry code */
+#    define USER_REGS_STRUCT_IP(regss)           (regss.rip)
+#    define USER_REGS_STRUCT_SP(regss)           (regss.rsp)
+#    define USER_REGS_STRUCT_SC_NO(regss)        ((const int)(regss.orig_rax))
+#    define USER_REGS_STRUCT_SC_RTNVAL(regss)    (regss.rax)
+#    define USER_REGS_STRUCT_SC_ARG0(regss)      (regss.rdi)
+#    define USER_REGS_STRUCT_SC_ARG1(regss)      (regss.rsi)
+#    define USER_REGS_STRUCT_SC_ARG2(regss)      (regss.rdx)
+#    define USER_REGS_STRUCT_SC_ARG3(regss)      (regss.r10)
+#    define USER_REGS_STRUCT_SC_ARG4(regss)      (regss.r8)
+#    define USER_REGS_STRUCT_SC_ARG5(regss)      (regss.r9)
+#    define USER_REGS_STRUCT_SC_HAS_RTNED(regss) (regss.rax != ((unsigned long long)-38))     /* -38 (ENOSYS) is put into RAX as a default return value by the kernel's syscall entry code */
 #  else /* __i386__ */
-#    define SYSCALL_REG_CALLNO(regss) ((const int)(regss.orig_eax))
-#    define SYSCALL_REG_RETURN(regss) (regss.eax)
-#    define SYSCALL_REG_ARG0(regss)   (regss.ebx)
-#    define SYSCALL_REG_ARG1(regss)   (regss.ecx)
-#    define SYSCALL_REG_ARG2(regss)   (regss.edx)
-#    define SYSCALL_REG_ARG3(regss)   (regss.esi)
-#    define SYSCALL_REG_ARG4(regss)   (regss.edi)
-#    define SYSCALL_REG_ARG5(regss)   (regss.ebp)
-#    define SYSCALL_RETED(regss)      (regss.eax != ((unsigned long)-38))    // $$ TODO: CHECK WHETHER CORRECT $$
+#    define USER_REGS_STRUCT_IP(regss)           (regss.eip)
+#    define USER_REGS_STRUCT_SP(regss)           (regss.esp)
+#    define USER_REGS_STRUCT_SC_NO(regss)        ((const int)(regss.orig_eax))
+#    define USER_REGS_STRUCT_SC_RTNVAL(regss)    (regss.eax)
+#    define USER_REGS_STRUCT_SC_ARG0(regss)      (regss.ebx)
+#    define USER_REGS_STRUCT_SC_ARG1(regss)      (regss.ecx)
+#    define USER_REGS_STRUCT_SC_ARG2(regss)      (regss.edx)
+#    define USER_REGS_STRUCT_SC_ARG3(regss)      (regss.esi)
+#    define USER_REGS_STRUCT_SC_ARG4(regss)      (regss.edi)
+#    define USER_REGS_STRUCT_SC_ARG5(regss)      (regss.ebp)
+#    define USER_REGS_STRUCT_SC_HAS_RTNED(regss) (regss.eax != ((unsigned long)-38))    // $$ TODO: CHECK WHETHER CORRECT $$
 # endif
 
 
@@ -66,16 +70,19 @@
 //
 // #define NO_SYSCALL (-1)
 //
-// /* - Registers (sno = x8, args = x0 to x5, rtn value = x0) - */
-// #  define SYSCALL_REG_CALLNO(regss) ((const int)(regss.syscallno))
-// #  define SYSCALL_REG_RETURN(regss) (regss.regs[0])
-// #  define SYSCALL_REG_ARG0(regss)   (regss.regs[0])
-// #  define SYSCALL_REG_ARG1(regss)   (regss.regs[1])
-// #  define SYSCALL_REG_ARG2(regss)   (regss.regs[2])
-// #  define SYSCALL_REG_ARG3(regss)   (regss.regs[3])
-// #  define SYSCALL_REG_ARG4(regss)   (regss.regs[4])
-// #  define SYSCALL_REG_ARG5(regss)   (regss.regs[5])
-// #  define SYSCALL_RETED(regss)      (regss.regs[7] == 1 && SYSCALL_REG_CALLNO(regss) != NO_SYSCALL)    // reg[7] is 0 before syscall and 1 after
+// /* - Macros for accessing registers (and other information) in `user_regs_struct` - */
+// // (sno = x8, args = x0 to x5, rtn value = x0)
+// #  define USER_REGS_STRUCT_IP(regss)           (regss.pc)
+// #  define USER_REGS_STRUCT_SP(regss)           (regss.sp)
+// #  define USER_REGS_STRUCT_SC_NO(regss)        ((const int)(regss.syscallno))
+// #  define USER_REGS_STRUCT_SC_RTNVAL(regss)    (regss.regs[0])
+// #  define USER_REGS_STRUCT_SC_ARG0(regss)      (regss.regs[0])
+// #  define USER_REGS_STRUCT_SC_ARG1(regss)      (regss.regs[1])
+// #  define USER_REGS_STRUCT_SC_ARG2(regss)      (regss.regs[2])
+// #  define USER_REGS_STRUCT_SC_ARG3(regss)      (regss.regs[3])
+// #  define USER_REGS_STRUCT_SC_ARG4(regss)      (regss.regs[4])
+// #  define USER_REGS_STRUCT_SC_ARG5(regss)      (regss.regs[5])
+// #  define USER_REGS_STRUCT_SC_HAS_RTNED(regss) (regss.regs[7] == 1 && USER_REGS_STRUCT_SC_NO(regss) != NO_SYSCALL)    // reg[7] is 0 before syscall and 1 after
 
 
 #else
@@ -85,4 +92,4 @@
 #endif
 
 
-#endif /* PTRACE_ARCH_H */
+#endif /* PTRACE_UTILS_ARCH_H */

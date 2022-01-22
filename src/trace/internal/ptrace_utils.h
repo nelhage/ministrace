@@ -1,10 +1,9 @@
 /**
- * Functions utilizing `ptrace(2)` which make tracing easier
+ * Functions utilizing `ptrace`(2)
  */
 #ifndef PTRACE_UTILS_H
 #define PTRACE_UTILS_H
 
-#include <stdbool.h>
 #include <unistd.h>
 
 #include "arch/ptrace_utils.h"
