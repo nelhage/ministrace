@@ -31,10 +31,9 @@ void _wait_for_user_input(void);
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
 int do_tracee(int argc, char **argv) {
 /* exec setup: Create new array for argv of to be exec'd command */
-    char *child_exec_argv[argc + 1 /* NULL terminator */];
-    memcpy(child_exec_argv, argv, (argc * sizeof(argv[0])));
-    child_exec_argv[argc] = NULL;
-    const char* child_exec = child_exec_argv[0];
+    char *tracee_exec_argv[argc + 1 /* NULL terminator */];
+    memcpy(tracee_exec_argv, argv, (argc * sizeof(argv[0])));
+    tracee_exec_argv[argc] = NULL;
 
 /* ELUCIDATION:
  *   - `PTRACE_TRACEME`: Starts tracing + causes next signal (sent to this
@@ -45,10 +44,10 @@ int do_tracee(int argc, char **argv) {
 /* Stop oneself so parent can set tracing option + Parent will see exec syscall */
     kill(getpid(), SIGSTOP);
 /* Execute actual program */
-    return execvp(child_exec, child_exec_argv);
+    return execvp(tracee_exec_argv[0], tracee_exec_argv);
 
 /* Error handling (in case `execvp` failed) */
-    LOG_ERROR_AND_EXIT("Couldn't exec \"%s\"", child_exec);
+    LOG_ERROR_AND_EXIT("Couldn't exec \"%s\"", tracee_exec_argv[0]);
 }
 
 
@@ -79,16 +78,16 @@ int do_tracer(const pid_t tracee_pid,
         DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));          /* For required permissions, see https://www.kernel.org/doc/Documentation/security/Yama.txt */
     }
 
-    int status;
+    int tracee_status;
     do {
-        DIE_WHEN_ERRNO(waitpid(tracee_pid, &status, 0));
-    } while(!WIFSTOPPED(status));
+        DIE_WHEN_ERRNO(waitpid(tracee_pid, &tracee_status, 0));
+    } while(!WIFSTOPPED(tracee_status));
 
     /*
      * ELUCIDATION:
      *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
      */
-    if (!WIFSTOPPED(status)) {
+    if (!WIFSTOPPED(tracee_status)) {
         LOG_ERROR_AND_EXIT("Couldn't stop child process");
     }
 
@@ -247,8 +246,8 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *   - `__WALL`: Wait for all children, regardless of type (`clone` or non-`clone`)
          *               See also https://kernelnewbies.kernelnewbies.narkive.com/9Zd9eWeb/waitpid-2-and-clone-thread
          */
-        int status;
-        pid_t wait_tid = DIE_WHEN_ERRNO(waitpid(-1, &status, __WALL));
+        int tracee_status;
+        pid_t wait_tid = DIE_WHEN_ERRNO(waitpid(-1, &tracee_status, __WALL));
 
 
         /* (2) Check tracee's process status */
@@ -268,9 +267,9 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *   - `int WIFSTOPPED (int status)`: Returns nonzero value if child is stopped
          *     - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
-        if (WIFSTOPPED(status)) {
+        if (WIFSTOPPED(tracee_status)) {
             tid = wait_tid;
-            const int stopsig = WSTOPSIG(status);
+            const int stopsig = WSTOPSIG(tracee_status);
 
             /* (I) Syscall-enter-/-exit-stop
              *     Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
@@ -311,10 +310,10 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *     (II)  Child exited due to signal (check via `WIFSIGNALED(status)`)
          */
         } else {
-            if (WIFEXITED(status)) {
-                *exit_status = WEXITSTATUS(status);
-            } else if (WIFSIGNALED(status)) {
-                *exit_status = WTERMSIG(status);
+            if (WIFEXITED(tracee_status)) {
+                *exit_status = WEXITSTATUS(tracee_status);
+            } else if (WIFSIGNALED(tracee_status)) {
+                *exit_status = WTERMSIG(tracee_status);
             }
 
             return -(wait_tid);
