@@ -10,14 +10,15 @@
 
 
 /* -- Types -- */
-typedef struct cli_args {
+typedef struct {
     bool list_syscalls;
-    pid_t attach_to_process;
+    pid_t pid_to_attach_to;
     bool follow_fork;
     long pause_on_scall_nr;
 #ifdef WITH_STACK_UNWINDING
     bool print_stack_traces;
 #endif /* WITH_STACK_UNWINDING */
+//    bool daemonize_tracer;
 
     bool trace_only_syscall_subset;
     bool to_be_traced_syscall_subset[SYSCALLS_ARR_SIZE];

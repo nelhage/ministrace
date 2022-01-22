@@ -29,7 +29,7 @@ void _wait_for_user_input(void);
 
 
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
-int do_tracee(int argc, char **argv) {
+int do_tracee(int argc, char** argv) {
 /* exec setup: Create new array for argv of to be exec'd command */
     char *tracee_exec_argv[argc + 1 /* NULL terminator */];
     memcpy(tracee_exec_argv, argv, (argc * sizeof(argv[0])));
@@ -52,21 +52,16 @@ int do_tracee(int argc, char **argv) {
 
 
 /* -- Tracing -- */
-int do_tracer(const pid_t tracee_pid,
-              const bool attach_to_tracee,
-              const long pause_on_syscall_nr,
-              const bool* const to_be_traced_syscall_subset,
-              const bool follow_fork
-#ifdef WITH_STACK_UNWINDING
-            , const bool print_stacktrace
-#endif /* WITH_STACK_UNWINDING */
-) {
+int do_tracer(tracer_options* options) {
+    const pid_t tracee_pid = options->tracee_pid;
+
+
     /* Disable IO buffering for accurate output */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
 
-    if (attach_to_tracee) {
+    if (options->attach_to_tracee) {
         /* ELUCIDATION:
          *  - `PTRACE_ATTACH`: Attach to process specified by `pid`
          *                     (making it a tracee of the calling process)
@@ -98,7 +93,7 @@ int do_tracer(const pid_t tracee_pid,
      *                              `status>>8 == (SIGTRAP | (PTRACE_EVENT_CLONE<<8))`
      */
     unsigned int ptrace_setoptions = PTRACE_O_TRACESYSGOOD;
-    if (follow_fork) {
+    if (options->follow_fork) {
         ptrace_setoptions |= PTRACE_O_TRACECLONE
                            | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
     }
@@ -106,7 +101,7 @@ int do_tracer(const pid_t tracee_pid,
 
 
 #ifdef WITH_STACK_UNWINDING
-    if (print_stacktrace) {
+    if (options->print_stacktrace) {
         unwind_init();
     }
 #endif /* WITH_STACK_UNWINDING */
@@ -141,7 +136,7 @@ int do_tracer(const pid_t tracee_pid,
 
             const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
 
-            if (to_be_traced_syscall_subset && !to_be_traced_syscall_subset[syscall_nr]) {
+            if (options->to_be_traced_syscall_subset && !(options->to_be_traced_syscall_subset[syscall_nr])) {
                 continue;   /* Current "trapped" syscall shall not be traced -> don't print it */
             }
 
@@ -157,7 +152,7 @@ int do_tracer(const pid_t tracee_pid,
             if (!USER_REGS_STRUCT_SC_HAS_RTNED(regs)) {
                 // LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
 
-                if (follow_fork) {
+                if (options->follow_fork) {
                     fprintf(stderr, "\n[%d] ", cur_tid);
                 }
                 fprintf(stderr, "%s(", scall_name);
@@ -165,7 +160,7 @@ int do_tracer(const pid_t tracee_pid,
                 fprintf(stderr, ")");
 
                 /* OPTIONAL: Stop (i.e., single step) if requested */
-                if (syscall_nr == pause_on_syscall_nr) {
+                if (syscall_nr == options->pause_on_syscall_nr) {
                     _wait_for_user_input();
                 }
 
@@ -173,7 +168,7 @@ int do_tracer(const pid_t tracee_pid,
             } else {
                 // LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
 
-                if (follow_fork) {      /* For task identification (in log) when following `clone`s */
+                if (options->follow_fork) {      /* For task identification (in log) when following `clone`s */
                     fprintf(stderr, "\n... [%d - %s (%d)]",
                             cur_tid, scall_name, cur_tid);
                 }
@@ -181,7 +176,7 @@ int do_tracer(const pid_t tracee_pid,
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
 #ifdef WITH_STACK_UNWINDING
-                if (print_stacktrace) {
+                if (options->print_stacktrace) {
                     unwind_print_backtrace_of_tid(cur_tid);
                 }
 #endif /* WITH_STACK_UNWINDING */
@@ -190,7 +185,7 @@ int do_tracer(const pid_t tracee_pid,
     }
 
 #ifdef WITH_STACK_UNWINDING
-    if (print_stacktrace) {
+    if (options->print_stacktrace) {
         unwind_fin();
     }
 #endif /* WITH_STACK_UNWINDING */

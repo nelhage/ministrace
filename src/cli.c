@@ -34,6 +34,12 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
 
+//    /* Daemonize tracer */
+//        case 'd':
+//            arguments->daemonize_tracer = true;
+//            arguments->exec_arg_offset++;
+//            break;
+
     /* Trace only subset of syscalls */
         case 'e':
             {
@@ -108,7 +114,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                 if (-1 == str_to_long(arg, &parsed_attach_pid)) {
                     argp_usage(state);
                 }
-                arguments->attach_to_process = (pid_t)parsed_attach_pid;
+                arguments->pid_to_attach_to = (pid_t)parsed_attach_pid;
             }
             break;
 
@@ -118,7 +124,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_END:
           /* Not enough arguments */
-          if (state->arg_num < 1 && (!arguments->list_syscalls && -1 == arguments->attach_to_process)) {
+          if (state->arg_num < 1 && (!arguments->list_syscalls && -1 == arguments->pid_to_attach_to)) {
             argp_usage(state);
           }
           break;
@@ -134,25 +140,27 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 void parse_cli_args(int argc, char** argv,
                     cli_args* parsed_cli_args_ptr) {
     static const struct argp_option cli_options[] = {
-        {"list-syscalls", 'l', NULL,          0, "List supported system calls", 0},
-        {"attach",        'p', "pid",         0, "Attach to already running process", 1},
-        {"follow-forks",  'f', NULL,          0, "Follow `fork`ed child processes", 2},
-        {"pause-snr",     'n', "nr",          0, "Pause on specified system call nr", 3},
-        {"pause-sname",   'a', "name",        0, "Pause on specified system call name", 3},
+        {"list-syscalls", 'l', NULL,          0, "List supported system calls",                                                    0},
+        {"attach",        'p', "pid",         0, "Attach to already running process",                                              1},
+        {"follow-forks",  'f', NULL,          0, "Follow `fork`ed child processes",                                                2},
+        {"pause-snr",     'n', "nr",          0, "Pause on specified system call nr",                                              3},
+        {"pause-sname",   'a', "name",        0, "Pause on specified system call name",                                            3},
 #ifdef WITH_STACK_UNWINDING
         {"stack-traces",  'k', NULL,          0, "Print the execution stack trace of the traced processes after each system call", 4},
 #endif /* WITH_STACK_UNWINDING */
-        {"trace",         'e', "syscall_set", 0, "Trace only the specified (as comma-list seperated) set of system calls", 4},
+        {"trace",         'e', "syscall_set", 0, "Trace only the specified (as comma-list seperated) set of system calls",         4},
+//        {"daemonize",     'd', NULL,          0, "Run tracer process as a grandchild, not as the parent of the tracee",            5},
         {0}
     };
 
   /* Defaults */
     parsed_cli_args_ptr->list_syscalls = false;
-    parsed_cli_args_ptr->attach_to_process = -1;
+    parsed_cli_args_ptr->pid_to_attach_to = -1;
     parsed_cli_args_ptr->follow_fork = false;
 #ifdef WITH_STACK_UNWINDING
     parsed_cli_args_ptr->print_stack_traces = false;
 #endif /* WITH_STACK_UNWINDING */
+//    parsed_cli_args_ptr->daemonize_tracer = false;
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
     parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->trace_only_syscall_subset = false;
