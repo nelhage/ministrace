@@ -15,7 +15,7 @@
   } while(0)
 #else
 #  define LOG_DEBUG(format, ...) do { } while(0)
-#endif
+#endif /* NDEBUG */
 
 #define LOG_WARN(format, ...)                                                                           \
   do {                                                                                                  \

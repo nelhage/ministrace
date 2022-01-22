@@ -66,7 +66,6 @@ int do_tracer(const pid_t tracee_pid,
     setvbuf(stderr, NULL, _IONBF, 0);
 
 
-/* 0a. Setup: Wait until child stops */
     if (attach_to_tracee) {
         /* ELUCIDATION:
          *  - `PTRACE_ATTACH`: Attach to process specified by `pid`
@@ -78,19 +77,14 @@ int do_tracer(const pid_t tracee_pid,
         DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));          /* For required permissions, see https://www.kernel.org/doc/Documentation/security/Yama.txt */
     }
 
+/* 0a. Setup: Wait until child stops  (either stopped by `PTRACE_ATTACH` or by function `do_tracee`) */
+    /* ELUCIDATION:
+     *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
+     */
     int tracee_status;
     do {
         DIE_WHEN_ERRNO(waitpid(tracee_pid, &tracee_status, 0));
     } while(!WIFSTOPPED(tracee_status));
-
-    /*
-     * ELUCIDATION:
-     *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
-     */
-    if (!WIFSTOPPED(tracee_status)) {
-        LOG_ERROR_AND_EXIT("Couldn't stop child process");
-    }
-
 
 /* 0b. Setup: Set ptrace options */
     /* ELUCIDATION:
