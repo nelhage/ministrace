@@ -56,7 +56,9 @@ int main(int argc, char **argv) {
         if (!strcmp("--", argv[child_args_offset])) {                   /* `--` for stop parsing cli args (otherwise args of to be traced program will be parsed) */
             child_args_offset++;
         }
-        pid_t pid = DIE_WHEN_ERRNO(fork());
+
+/* TODO: Reverseable roles (i.e., tracee as parent; currently: Child (`fork`-pid = 0) = tracee / Parent (`fork`-pid > 0) = tracer) */
+        const pid_t pid = DIE_WHEN_ERRNO(fork());
         return (!pid) ?
                (do_tracee(argc - child_args_offset, argv + child_args_offset)) :
                (do_tracer(pid,

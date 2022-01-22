@@ -45,13 +45,14 @@
 /* - Types - */
 #  define user_regs_struct_full user_regs_struct
 
-/* - Macros - */
+/* - Macros for accessing registers (and other information) in `user_regs_struct` - */
 #  define USER_REGS_STRUCT_IP(user_struct) (user_struct.rip)
 #  define USER_REGS_STRUCT_SP(user_struct) (user_struct.rsp)
 
 
 /* ----------- arm64 ----------- */
 #elif defined(__aarch64__)
+
 /* - Types - */
 struct user_regs_struct_full {
   __extension__ union {                  /* `__extension__` to disable anonymous struct/union warning */
@@ -65,7 +66,7 @@ struct user_regs_struct_full {
   };
 };
 
-/* - Macros - */
+/* - Macros for accessing registers (and other information) in `user_regs_struct` - */
 #  define USER_REGS_STRUCT_IP(user_struct) (user_struct.pc)
 #  define USER_REGS_STRUCT_SP(user_struct) (user_struct.sp)
 
@@ -139,6 +140,10 @@ int do_tracer(void* arg) {
 
     _print_task_info(stderr, "tracer");
     fprintf(stderr, "[tracer] >>>  Target (= tracee): %d  <<<\n\n", tracee_tid);
+
+
+
+/* -- Attach to tracee -- */
     /* `PTRACE_SEIZE`: Attach to the process specified in pid, making
      *                 it a tracee of the calling process
      *                 Doesn't stop the process (unlike `PTRACE_ATTACH`)
@@ -147,6 +152,7 @@ int do_tracer(void* arg) {
         perror("failed monitor seize");
         exit(1);
     }
+/* -- Attach to tracee -- */
 
 
 
