@@ -21,31 +21,6 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
     cli_args *arguments = state->input;
 
     switch(key) {
-    /* List syscalls (and exit) */
-        case 'l':
-            arguments->list_syscalls = true;
-            break;
-
-    /* Follow `clone`'s */
-        case 'f':
-            arguments->follow_fork = true;
-            arguments->exec_arg_offset++;
-            break;
-
-    /* Pause on specified syscall (passed as number) */
-        case 'n':
-            {
-                long parsed_syscall_nr = -1;
-                if ((-1 != arguments->pause_on_scall_nr)         ||
-                    (-1 == str_to_long(arg, &parsed_syscall_nr)) ||
-                    (!syscalls_get_name(parsed_syscall_nr))) {
-                    argp_usage(state);
-                }
-                arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
-                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
-            }
-            break;
-
     /* Pause on specified syscall (passed as name) */
         case 'a':
             {
@@ -58,25 +33,6 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                 arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
             }
             break;
-
-    /* Attach to already running process w/ corresponding pid */
-        case 'p':
-            {
-                long parsed_attach_pid = -1;
-                if (-1 == str_to_long(arg, &parsed_attach_pid)) {
-                    argp_usage(state);
-                }
-                arguments->attach_to_process = (pid_t)parsed_attach_pid;
-            }
-            break;
-
-#ifdef WITH_STACK_UNWINDING
-    /* Print stack when printing syscall */
-        case 'k':
-            arguments->print_stack_traces = true;
-            arguments->exec_arg_offset++;
-            break;
-#endif /* WITH_STACK_UNWINDING */
 
     /* Trace only subset of syscalls */
         case 'e':
@@ -109,6 +65,50 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                     arguments->to_be_traced_syscall_subset[scall_nr] = true;
                 }
                 arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            }
+            break;
+
+    /* Follow `clone`'s */
+        case 'f':
+            arguments->follow_fork = true;
+            arguments->exec_arg_offset++;
+            break;
+
+#ifdef WITH_STACK_UNWINDING
+    /* Print stack when printing syscall */
+        case 'k':
+            arguments->print_stack_traces = true;
+            arguments->exec_arg_offset++;
+            break;
+#endif /* WITH_STACK_UNWINDING */
+
+    /* List syscalls (and exit) */
+        case 'l':
+            arguments->list_syscalls = true;
+            break;
+
+    /* Pause on specified syscall (passed as number) */
+        case 'n':
+            {
+                long parsed_syscall_nr = -1;
+                if ((-1 != arguments->pause_on_scall_nr)         ||
+                    (-1 == str_to_long(arg, &parsed_syscall_nr)) ||
+                    (!syscalls_get_name(parsed_syscall_nr))) {
+                    argp_usage(state);
+                }
+                arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
+                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            }
+            break;
+
+    /* Attach to already running process w/ corresponding pid */
+        case 'p':
+            {
+                long parsed_attach_pid = -1;
+                if (-1 == str_to_long(arg, &parsed_attach_pid)) {
+                    argp_usage(state);
+                }
+                arguments->attach_to_process = (pid_t)parsed_attach_pid;
             }
             break;
 
