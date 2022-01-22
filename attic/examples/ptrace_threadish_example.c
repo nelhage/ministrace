@@ -13,11 +13,6 @@
  *                   to have a new thread that is in a _different_ thread group, but is able to ptrace
  *                   and also is "synchronized" with the VM, simply b/c it shares it with all the other
  *                   threads it might want to debug
- *
- *
- * -------------- -------------- -------------- -------------
- * Switch tracing roles: Use `gcc -DSWITCH_TRACE_ROLES ...`
- * -------------- -------------- -------------- -------------
  */
 #define _GNU_SOURCE
 #include <elf.h>
@@ -35,6 +30,8 @@
 #include <sys/user.h>
 // #include <sys/prctl.h>
 #include <time.h>
+#include <string.h>
+#include <stdbool.h>
 
 
 
@@ -157,7 +154,7 @@ int do_tracer(void* arg) {
 
 
 
-    fprintf(stderr, "[tracer] >>>  Beginning monitoring ...  <<<\n\n", tracee_tid);
+    fputs("[tracer] >>>  Beginning monitoring ...  <<<\n\n", stderr);
 
     while (1) {
         sleep(1);
@@ -231,6 +228,9 @@ static void inline _perform_clone(int (*fn)(void *), void* stack, int flags, voi
 }
 
 int main(int argc, char** argv) {
+    const bool switch_roles = (2 == argc && !strcmp("--switch-roles", argv[1]));
+
+
     #define CHILD_STACK_SIZE (1024 * 1024)            // this number is arbitrary - find a better one.
 
 /* -- 0. Setup: Child's stack -- */
@@ -242,43 +242,44 @@ int main(int argc, char** argv) {
 
 
 /* - 1. Launch tracer & tracee (!! IMPORANT: Order matters !!) - */
-  int clone_flags = CLONE_VM |   /* $$$ TODO: Following flags necessary $$$ ?? */   CLONE_FILES | CLONE_FS | CLONE_IO;        // TESTING (AS THREAD; CHECK via `sysctl kernel.yama.ptrace_scope` (`echo "0" | sudo tee /proc/sys/kernel/yama/ptrace_scope`)):  CLONE_SIGHAND | CLONE_VM | CLONE_THREAD
-
-#ifndef SWITCH_TRACE_ROLES
-  /* >>  Default: "Child" (task reulting from `clone`(2)) = tracee, "Parent" = tracer  << */
-    fprintf(stdout, ">>> Compiled w/ following roles: \"Parent\" = tracer, \"Child\" = tracee <<<\n\n\n");
+    int clone_flags = CLONE_VM |   /* $$$ TODO: Following flags necessary $$$ ?? */   CLONE_FILES | CLONE_FS | CLONE_IO;        // TESTING (AS THREAD; CHECK via `sysctl kernel.yama.ptrace_scope` (`echo "0" | sudo tee /proc/sys/kernel/yama/ptrace_scope`)):  CLONE_SIGHAND | CLONE_VM | CLONE_THREAD
 
 
-    int (*clone_fn)(void*) = tracee_routine;
-
-    pid_t tracee_tid;
-    void* clone_arg = NULL;
-    pid_t* clone_parent_tid = &tracee_tid;
-    clone_flags |= CLONE_PARENT_SETTID;
+    if (!switch_roles) {
+    /* >>  Default: "Child" (task reulting from `clone`(2)) = tracee, "Parent" = tracer  << */
+      fputs(">>> Tracing roles: \"Parent\" = tracer, \"Child\" = tracee <<<\n\n\n", stdout);
 
 
-    _perform_clone(clone_fn, child_stack + CHILD_STACK_SIZE, clone_flags, clone_arg, clone_parent_tid);
-    do_tracer(&tracee_tid);
-#else
-  /* >>  Switched roles: "Child" (task reulting from `clone`(2)) = tracer, "Parent" = tracee   !!!  REQUIRES CURRENTLY kernel.yama.ptrace_scope=0 !!!  << */
-    fprintf(stdout, ">>> Compiled w/ following roles: \"Parent\" = tracee, \"Child\" = tracer <<<\n\n\n");
+      int (*clone_fn)(void*) = tracee_routine;
+
+      pid_t tracee_tid;
+      void* clone_arg = NULL;
+      pid_t* clone_parent_tid = &tracee_tid;
+      clone_flags |= CLONE_PARENT_SETTID;
 
 
-    int (*clone_fn)(void*) = do_tracer;
+      _perform_clone(clone_fn, child_stack + CHILD_STACK_SIZE, clone_flags, clone_arg, clone_parent_tid);
+      do_tracer(&tracee_tid);
+    } else {
+    /* >>  Switched roles: "Child" (task reulting from `clone`(2)) = tracer, "Parent" = tracee   !!!  REQUIRES CURRENTLY kernel.yama.ptrace_scope=0 !!!  << */
+      fputs(">>> Tracing roles: \"Parent\" = tracee, \"Child\" = tracer <<<\n\n\n", stdout);
 
-    pid_t tracee_tid = gettid();
-    void* clone_arg = &tracee_tid;
-    pid_t* clone_parent_tid = NULL;
+
+      int (*clone_fn)(void*) = do_tracer;
+
+      pid_t tracee_tid = gettid();
+      void* clone_arg = &tracee_tid;
+      pid_t* clone_parent_tid = NULL;
 
 
-    _perform_clone(clone_fn, child_stack + CHILD_STACK_SIZE, clone_flags, clone_arg, clone_parent_tid);
-    // TODO: Try to set permissions, e.g.,
-    // if (prctl(PR_SET_PTRACER, clone_parent_tid, 0, 0, 0)) {     /* Required when `sysctl kernel.yama.ptrace_scope` = 1 */
-    //     perror("Couldn't set tracing permissions");
-    //     exit(1);
-    // }
-    tracee_routine(NULL);
-#endif /* SWITCH_TRACE_ROLES */
+      _perform_clone(clone_fn, child_stack + CHILD_STACK_SIZE, clone_flags, clone_arg, clone_parent_tid);
+      // TODO: Try to set permissions, e.g.,
+      // if (prctl(PR_SET_PTRACER, clone_parent_tid, 0, 0, 0)) {     /* Required when `sysctl kernel.yama.ptrace_scope` = 1 */
+      //     perror("Couldn't set tracing permissions");
+      //     exit(1);
+      // }
+      tracee_routine(NULL);
+    }
 
 
     return 0;
