@@ -46,8 +46,8 @@
 #  define user_regs_struct_full user_regs_struct
 
 /* - Macros - */
-#  define REG_IP(user_struct) (user_struct.rip)
-#  define REG_SP(user_struct) (user_struct.rsp)
+#  define USER_REGS_STRUCT_IP(user_struct) (user_struct.rip)
+#  define USER_REGS_STRUCT_SP(user_struct) (user_struct.rsp)
 
 
 /* ----------- arm64 ----------- */
@@ -66,8 +66,8 @@ struct user_regs_struct_full {
 };
 
 /* - Macros - */
-#  define REG_IP(user_struct) (user_struct.pc)
-#  define REG_SP(user_struct) (user_struct.sp)
+#  define USER_REGS_STRUCT_IP(user_struct) (user_struct.pc)
+#  define USER_REGS_STRUCT_SP(user_struct) (user_struct.sp)
 
 
 #else
@@ -138,7 +138,7 @@ int do_tracer(void* arg) {
     const pid_t tracee_tid = *((pid_t*)arg);
 
     _print_task_info(stderr, "tracer");
-    fprintf(stderr, "[tracer] >>>  Target (= tracee): %d, beginning monitoring ...  <<<\n\n", tracee_tid);
+    fprintf(stderr, "[tracer] >>>  Target (= tracee): %d  <<<\n\n", tracee_tid);
     /* `PTRACE_SEIZE`: Attach to the process specified in pid, making
      *                 it a tracee of the calling process
      *                 Doesn't stop the process (unlike `PTRACE_ATTACH`)
@@ -147,6 +147,11 @@ int do_tracer(void* arg) {
         perror("failed monitor seize");
         exit(1);
     }
+
+
+
+
+    fprintf(stderr, "[tracer] >>>  Beginning monitoring ...  <<<\n\n", tracee_tid);
 
     while (1) {
         sleep(1);
@@ -175,7 +180,8 @@ int do_tracer(void* arg) {
           fputs("[tracer] failed to read registers", stderr);
           break;
         }
-        fprintf(stderr, "[tracer] %ld    IP=0x%llx SP=0x%llx\n", time(NULL), REG_IP(user_regs_struct), REG_SP(user_regs_struct));
+        fprintf(stderr, "[tracer] %ld    IP=0x%llx SP=0x%llx\n",
+                time(NULL), USER_REGS_STRUCT_IP(user_regs_struct), USER_REGS_STRUCT_SP(user_regs_struct));
         fprintf(stderr, "[tracer]  > Tracee wrote currently %d bytes to a stream\n", _shared_mem_test_bytes_writen);      // Testing shared memory
         fputs("\n", stderr);
     /* - Print tracee status - */
