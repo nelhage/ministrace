@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/prctl.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -23,45 +24,79 @@
 
 /* -- Function prototypes -- */
 int _wait_for_syscall_or_exit(pid_t tid, int *exit_status);
-
 void _wait_for_user_input(void);
 
 
-
 /* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
-int do_tracee(int argc, char** argv) {
+int do_tracee(int argc, char** argv,
+              tracer_options* tracer_options) {
 /* exec setup: Create new array for argv of to be exec'd command */
-    char *tracee_exec_argv[argc + 1 /* NULL terminator */];
+    char *tracee_exec_argv[argc + 1 /* NULL terminator */];     /* Use VLA (to avoid `malloc`(3)) */
     memcpy(tracee_exec_argv, argv, (argc * sizeof(argv[0])));
     tracee_exec_argv[argc] = NULL;
 
-/* ELUCIDATION:
- *   - `PTRACE_TRACEME`: Starts tracing + causes next signal (sent to this
- *                       process) to stop it & notify the parent(via `wait`),
- *                       so that the parent knows to start tracing
- */
-    ptrace(PTRACE_TRACEME);
-/* Stop oneself so parent can set tracing option + Parent will see exec syscall */
-    kill(getpid(), SIGSTOP);
+    if (!tracer_options->daemonize) {
+        /* ELUCIDATION:
+         *   - `PTRACE_TRACEME`: Starts tracing + causes next signal (sent to this
+         *                       process) to stop it & notify the parent(via `wait`),
+         *                       so that the parent knows to start tracing
+         */
+        if (ptrace(PTRACE_TRACEME) < 0) {
+            LOG_ERROR_AND_EXIT("ptrace(PTRACE_TRACEME)");
+        }
+
+        /* Stop oneself so tracer can set ptrace options (+ tracer will see the `exec` syscall)
+         *    -> Tracer will resume execution w/ `PTRACE_SYSCALL`
+         */
+        kill(getpid(), SIGSTOP);
+    } else {
+    /* Allow non-root child to trace parent (ONLY PERTINENT when Yama ptrace_scope = 1 AND `PTRACE_ATTACH` is used) */
+        prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
+
+    /* `kill`(2) sent from grandchild (= tracer) to child will wake us up   -> `wait`(2) & reap child  */
+        /* we depend on SIGCHLD set to SIG_DFL by init code */
+        /* if it happens to be SIG_IGN'ed, wait won't block */
+        while (wait(NULL) < 0 && EINTR == errno);
+    }
+
 /* Execute actual program */
     return execvp(tracee_exec_argv[0], tracee_exec_argv);
-
-/* Error handling (in case `execvp` failed) */
-    LOG_ERROR_AND_EXIT("Couldn't exec \"%s\"", tracee_exec_argv[0]);
+    LOG_ERROR_AND_EXIT("Exec'ing \"%s\" failed", tracee_exec_argv[0]);
 }
 
 
 /* -- Tracing -- */
 int do_tracer(tracer_options* options) {
-    const pid_t tracee_pid = options->tracee_pid;
+    if (options->daemonize) {
+		const pid_t pid = DIE_WHEN_ERRNO(fork());
+    /* parent */
+		if (pid) {
+			/*
+			 * Wait for grandchild to attach to straced process
+			 * (grandparent). Grandchild SIGKILLs us after it attached.
+			 * Grandparent's wait() is unblocked by our death,
+			 * it proceeds to exec the straced program.
+			 */
+			pause();
+			_exit(0); /* paranoia */
+		}
 
+    /* grandchild   (will be tracer process) */
+        /*
+		 * Make parent go away.
+		 * Also makes grandparent's wait() unblock.
+		 */
+		kill(getppid(), SIGKILL);
+    }
+
+    const pid_t tracee_pid = options->tracee_pid;
 
     /* Disable IO buffering for accurate output */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
 
-    if (options->attach_to_tracee) {
+    if (options->attach_to_tracee || options->daemonize) {
         /* ELUCIDATION:
          *  - `PTRACE_ATTACH`: Attach to process specified by `pid`
          *                     (making it a tracee of the calling process)
@@ -71,8 +106,11 @@ int do_tracer(tracer_options* options) {
          */
         DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));          /* For required permissions, see https://www.kernel.org/doc/Documentation/security/Yama.txt */
     }
+    /* ELSE: tracee (= child) did `PTRACE_TRACEME`, hence, nothing to do in tracer (= parent)  */
 
-/* 0a. Setup: Wait until child stops  (either stopped by `PTRACE_ATTACH` or by function `do_tracee`) */
+/* 0a. Setup: Wait until child stops
+ *     Either already stopped by previous `PTRACE_ATTACH` or by itself
+ */
     /* ELUCIDATION:
      *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
      */

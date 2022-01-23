@@ -1,7 +1,7 @@
 // For libdw usage examples / internals, see
 //   - https://github.com/strace/strace/blob/master/src/unwind-libdw.c
 //   - https://github.com/ganboing/elfutils/tree/master/libdwfl
-// Prerequsites: libunwind-dev, libdw-dev & libiberty-dev
+// Prerequisites: libunwind-dev, libdw-dev & libiberty-dev
 // TODO: Performance optimizations (see strace's unwind-libdw.c for example)
 
 #include <elfutils/libdwfl.h>

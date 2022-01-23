@@ -4,6 +4,7 @@
 #ifndef CLI_H
 #define CLI_H
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 #include "generated/syscallents.h"
@@ -18,7 +19,7 @@ typedef struct {
 #ifdef WITH_STACK_UNWINDING
     bool print_stack_traces;
 #endif /* WITH_STACK_UNWINDING */
-//    bool daemonize_tracer;
+    bool daemonize_tracer;
 
     bool trace_only_syscall_subset;
     bool to_be_traced_syscall_subset[SYSCALLS_ARR_SIZE];

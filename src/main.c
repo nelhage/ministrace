@@ -2,18 +2,19 @@
  * - TODOs:
  *   - Fix arm64 tracing support (current implementation returns wrong syscall nr ??)
  *   - CLI args of child are currently parsed (e.g., `./ministrace echo -e "kkl\tlkl\n"`) causing usage error (parsing must be stopped by using `--` before args)
- *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap`)
+ *   - Pass also environment variables to tracee
+ *   - Issue: Return values of syscalls are always treated as `int` (but should be sometimes pointer, e.g., for `mmap` + print flags (bitmask consts))
  *   - Do we need PTRACE_DETATCH when using `-p` (i.e., `PTRACE_ATTACH`) option like strace does ??
  *
  * - Known issues:
- *   - execve(2) offset calculation is off when passing CLI options together (e.g., -fk) (causes app to SEGFAULT) ==> Hence options must be passed seperately
+ *   - execve(2) offset calculation is off when passing CLI options together (e.g., -fk) (causes app to SEGFAULT) ==> Hence options must be passed separately
  *   - Tracing:
+ *      - Daemon mode (-D) + attach (-p <pid>) causes ministrace to not react to ^C ?? (e.g., `sudo ./src/ministrace -D -p `pidof wireshark``)
  *      - Running `wireshark` and attaching w/ follow flag (sudo ./src/ministrace -f -p `pidof wireshark`) crashes wireshark (when e.g., opening OS related UIs)
  *          Console: [1]  + 48133 suspended (signal)  wireshark
  *      - Running `firefox` w/ follow option (./src/ministrace -f firefox) freezes UI
  */
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,7 @@ int main(int argc, char **argv) {
         .pause_on_syscall_nr = parsed_cli_args.pause_on_scall_nr,
         .to_be_traced_syscall_subset = (parsed_cli_args.trace_only_syscall_subset) ? (parsed_cli_args.to_be_traced_syscall_subset) : (NULL),
         .follow_fork = parsed_cli_args.follow_fork,
+        .daemonize = parsed_cli_args.daemonize_tracer,
 #ifdef WITH_STACK_UNWINDING
         .print_stacktrace = parsed_cli_args.print_stack_traces,
 #endif /* WITH_STACK_UNWINDING */
@@ -62,11 +64,19 @@ int main(int argc, char **argv) {
             child_args_offset++;
         }
 
-/* TODO: Reverseable roles (i.e., tracee as parent; currently: Child (`fork`-pid = 0) = tracee / Parent (`fork`-pid > 0) = tracer) */
         const pid_t pid = DIE_WHEN_ERRNO(fork());
-        tracer_options.tracee_pid = pid;
-        return (!pid) ?
-               (do_tracee(argc - child_args_offset, argv + child_args_offset)) :
-               (do_tracer(&tracer_options));
+        if (!tracer_options.daemonize) {
+        /* Roles: Tracer = Parent (`fork`-pid > 0)  /  Tracee = Child (`fork`-pid = 0) */
+            tracer_options.tracee_pid = pid;
+            return (!pid) ?
+                   (do_tracee(argc - child_args_offset, argv + child_args_offset, &tracer_options)) :
+                   (do_tracer(&tracer_options));
+        } else {
+        /* Roles: Tracee = Parent (`fork`-pid = 0)  /  Tracer = (Grand)child (`fork`-pid > 0) */
+            tracer_options.tracee_pid = getppid();
+            return (!pid) ?
+                   (do_tracer(&tracer_options)) :
+                   (do_tracee(argc - child_args_offset, argv + child_args_offset, &tracer_options));
+        }
     }
 }

@@ -12,6 +12,7 @@ typedef struct {
   long pause_on_syscall_nr;
   const bool* to_be_traced_syscall_subset;
   bool follow_fork;
+  bool daemonize;
 #ifdef WITH_STACK_UNWINDING
   bool print_stacktrace;
 #endif /* WITH_STACK_UNWINDING */
@@ -20,7 +21,8 @@ typedef struct {
 
 /* -- Function prototypes -- */
 int do_tracer(tracer_options* options);
-int do_tracee(int argc, char** argv);
+int do_tracee(int argc, char** argv,
+              tracer_options* options);
 
 
 #endif /* TRACING_H */

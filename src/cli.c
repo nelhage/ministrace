@@ -34,11 +34,11 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
 
-//    /* Daemonize tracer */
-//        case 'd':
-//            arguments->daemonize_tracer = true;
-//            arguments->exec_arg_offset++;
-//            break;
+    /* Daemonize tracer */
+        case 'D':
+            arguments->daemonize_tracer = true;
+            arguments->exec_arg_offset++;
+            break;
 
     /* Trace only subset of syscalls */
         case 'e':
@@ -149,7 +149,7 @@ void parse_cli_args(int argc, char** argv,
         {"stack-traces",  'k', NULL,          0, "Print the execution stack trace of the traced processes after each system call", 4},
 #endif /* WITH_STACK_UNWINDING */
         {"trace",         'e', "syscall_set", 0, "Trace only the specified (as comma-list seperated) set of system calls",         4},
-//        {"daemonize",     'd', NULL,          0, "Run tracer process as a grandchild, not as the parent of the tracee",            5},
+        {"daemonize",     'D', NULL,          0, "Run tracer process as a grandchild, not as the parent of the tracee",            5},
         {0}
     };
 
@@ -160,7 +160,7 @@ void parse_cli_args(int argc, char** argv,
 #ifdef WITH_STACK_UNWINDING
     parsed_cli_args_ptr->print_stack_traces = false;
 #endif /* WITH_STACK_UNWINDING */
-//    parsed_cli_args_ptr->daemonize_tracer = false;
+    parsed_cli_args_ptr->daemonize_tracer = false;
     parsed_cli_args_ptr->pause_on_scall_nr = -1;
     parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->trace_only_syscall_subset = false;

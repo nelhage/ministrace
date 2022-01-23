@@ -4,7 +4,7 @@
 ministrace v2 (or rather *medstrace*) is a ~~small~~ medium-sized strace implementation (v1 was originally written by Nelson Elhage
 (@nelhage)).
 
-ministrace is a minimal implementation of strace originally about ~~70~~ 700
+ministrace is a minimal implementation of strace originally about ~~70~~ 700+
 lines of C. It isn't nearly as functional as the real thing, but you
 can use it to learn most of what you need to know about the core
 interfaces it uses.
@@ -17,6 +17,7 @@ detail how it works.
 ### 1.1. Version history
 * v2: Adds support for &mldr;
   * passing signals to tracee(s)
+  * daemon mode
   * tracing multi-threaded programs
   * attaching to already running processes
   * stack unwinding
