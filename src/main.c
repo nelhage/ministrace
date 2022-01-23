@@ -41,14 +41,14 @@ int main(int argc, char **argv) {
 
 
     tracer_options tracer_options = {
-        .tracee_pid = parsed_cli_args.pid_to_attach_to,           /* May be overwritten when not attaching (w/ rtn-value of `fork`(2)) */
+        .tracee_pid = parsed_cli_args.pid_to_attach_to,           /* May be later overwritten when not attaching */
         .attach_to_tracee = (-1 != parsed_cli_args.pid_to_attach_to),
         .pause_on_syscall_nr = parsed_cli_args.pause_on_scall_nr,
-        .to_be_traced_syscall_subset = (parsed_cli_args.trace_only_syscall_subset) ? (parsed_cli_args.to_be_traced_syscall_subset) : (NULL),
+        .syscall_subset_to_be_traced = (parsed_cli_args.trace_only_syscall_subset) ? (parsed_cli_args.syscall_subset_to_be_traced) : (NULL),
         .follow_fork = parsed_cli_args.follow_fork,
         .daemonize = parsed_cli_args.daemonize_tracer,
 #ifdef WITH_STACK_UNWINDING
-        .print_stacktrace = parsed_cli_args.print_stack_traces,
+        .print_stacktrace = parsed_cli_args.print_stack_traces
 #endif /* WITH_STACK_UNWINDING */
     };
 
@@ -64,17 +64,17 @@ int main(int argc, char **argv) {
             child_args_offset++;
         }
 
-        const pid_t pid = DIE_WHEN_ERRNO(fork());
+        const pid_t childs_pid = DIE_WHEN_ERRNO(fork());
         if (!tracer_options.daemonize) {
-        /* Roles: Tracer = Parent (`fork`-pid > 0)  /  Tracee = Child (`fork`-pid = 0) */
-            tracer_options.tracee_pid = pid;
-            return (!pid) ?
+        /* Roles:  Tracer = Parent,  Tracee = Child */
+            tracer_options.tracee_pid = childs_pid;
+            return (!childs_pid) ?
                    (do_tracee(argc - child_args_offset, argv + child_args_offset, &tracer_options)) :
                    (do_tracer(&tracer_options));
         } else {
-        /* Roles: Tracee = Parent (`fork`-pid = 0)  /  Tracer = (Grand)child (`fork`-pid > 0) */
+        /* Roles:  Tracee = Parent,  Tracer = (Grand)child */
             tracer_options.tracee_pid = getppid();
-            return (!pid) ?
+            return (!childs_pid) ?
                    (do_tracer(&tracer_options)) :
                    (do_tracee(argc - child_args_offset, argv + child_args_offset, &tracer_options));
         }

@@ -27,11 +27,11 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status);
 void _wait_for_user_input(void);
 
 
-/* ----------------------------------------- ----------------------------------------- ----------------------------------------- */
+/* -- Functions -- */
 int do_tracee(int argc, char** argv,
               tracer_options* tracer_options) {
 /* exec setup: Create new array for argv of to be exec'd command */
-    char *tracee_exec_argv[argc + 1 /* NULL terminator */];     /* Use VLA (to avoid `malloc`(3)) */
+    char *tracee_exec_argv[argc + 1 /* NULL terminator */];     /* Use VLA (instead of `malloc`(3)) */
     memcpy(tracee_exec_argv, argv, (argc * sizeof(argv[0])));
     tracee_exec_argv[argc] = NULL;
 
@@ -50,7 +50,7 @@ int do_tracee(int argc, char** argv,
          */
         kill(getpid(), SIGSTOP);
     } else {
-    /* Allow non-root child to trace parent (ONLY PERTINENT when Yama ptrace_scope = 1 AND `PTRACE_ATTACH` is used) */
+    /* Allow non-root child (= tracer) to trace parent (= tracee)   (ONLY PERTINENT when Yama ptrace_scope = 1 AND `PTRACE_ATTACH` is used) */
         prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
 
     /* `kill`(2) sent from grandchild (= tracer) to child will wake us up   -> `wait`(2) & reap child  */
@@ -65,7 +65,7 @@ int do_tracee(int argc, char** argv,
 }
 
 
-/* -- Tracing -- */
+/* - Tracing - */
 int do_tracer(tracer_options* options) {
     if (options->daemonize) {
 		const pid_t pid = DIE_WHEN_ERRNO(fork());
@@ -81,7 +81,7 @@ int do_tracer(tracer_options* options) {
 			_exit(0); /* paranoia */
 		}
 
-    /* grandchild   (will be tracer process) */
+    /* grandchild   (will be tracer) */
         /*
 		 * Make parent go away.
 		 * Also makes grandparent's wait() unblock.
@@ -104,7 +104,7 @@ int do_tracer(tracer_options* options) {
          *                     will not necessarily have stopped by the
          *                     completion of this call => hence, use `waitpid`(2)
          */
-        DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));          /* For required permissions, see https://www.kernel.org/doc/Documentation/security/Yama.txt */
+        DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));
     }
     /* ELSE: tracee (= child) did `PTRACE_TRACEME`, hence, nothing to do in tracer (= parent)  */
 
@@ -174,7 +174,7 @@ int do_tracer(tracer_options* options) {
 
             const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
 
-            if (options->to_be_traced_syscall_subset && !(options->to_be_traced_syscall_subset[syscall_nr])) {
+            if (options->syscall_subset_to_be_traced && !(options->syscall_subset_to_be_traced[syscall_nr])) {
                 continue;   /* Current "trapped" syscall shall not be traced -> don't print it */
             }
 

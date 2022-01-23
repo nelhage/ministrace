@@ -21,56 +21,19 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
     cli_args *arguments = state->input;
 
     switch(key) {
-    /* Pause on specified syscall (passed as name) */
-        case 'a':
+    /* List syscalls (and exit) */
+        case 'l':
+            arguments->list_syscalls = true;
+            break;
+
+    /* Attach to already running process w/ corresponding pid */
+        case 'p':
             {
-                long syscall_nr = -1;
-                if ((-1 != arguments->pause_on_scall_nr) ||
-                    (-1 == (syscall_nr = syscalls_get_nr(arg)))) {
+                long parsed_attach_pid = -1;
+                if (-1 == str_to_long(arg, &parsed_attach_pid)) {
                     argp_usage(state);
                 }
-                arguments->pause_on_scall_nr = syscall_nr;
-                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
-            }
-            break;
-
-    /* Daemonize tracer */
-        case 'D':
-            arguments->daemonize_tracer = true;
-            arguments->exec_arg_offset++;
-            break;
-
-    /* Trace only subset of syscalls */
-        case 'e':
-            {
-                arguments->trace_only_syscall_subset = true;
-                memset(arguments->to_be_traced_syscall_subset, 0,
-                       SYSCALLS_ARR_SIZE * sizeof(*(arguments->to_be_traced_syscall_subset)));
-
-                if (strchr(arg, ',')) {
-                    char* arg_copy = strdup(arg);
-                    if (!arg_copy) {
-                        LOG_ERROR_AND_EXIT("Not enough memory avaialable to duplicate arg-string");
-                    }
-
-                    char* pch = NULL;
-                    while ((pch = strtok((!pch) ? (arg_copy) : (NULL), ","))) {
-                        const long scall_nr = syscalls_get_nr(pch);
-                        if (-1 == scall_nr) {
-                            argp_usage(state);
-                        }
-                        arguments->to_be_traced_syscall_subset[scall_nr] = true;
-                    }
-
-                    free(arg_copy);
-                } else {
-                    const long scall_nr = syscalls_get_nr(arg);
-                    if (-1 == scall_nr) {
-                        argp_usage(state);
-                    }
-                    arguments->to_be_traced_syscall_subset[scall_nr] = true;
-                }
-                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+                arguments->pid_to_attach_to = (pid_t)parsed_attach_pid;
             }
             break;
 
@@ -78,19 +41,6 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
         case 'f':
             arguments->follow_fork = true;
             arguments->exec_arg_offset++;
-            break;
-
-#ifdef WITH_STACK_UNWINDING
-    /* Print stack when printing syscall */
-        case 'k':
-            arguments->print_stack_traces = true;
-            arguments->exec_arg_offset++;
-            break;
-#endif /* WITH_STACK_UNWINDING */
-
-    /* List syscalls (and exit) */
-        case 'l':
-            arguments->list_syscalls = true;
             break;
 
     /* Pause on specified syscall (passed as number) */
@@ -107,16 +57,67 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
 
-    /* Attach to already running process w/ corresponding pid */
-        case 'p':
+    /* Pause on specified syscall (passed as name) */
+        case 'a':
             {
-                long parsed_attach_pid = -1;
-                if (-1 == str_to_long(arg, &parsed_attach_pid)) {
+                long syscall_nr = -1;
+                if ((-1 != arguments->pause_on_scall_nr) ||
+                    (-1 == (syscall_nr = syscalls_get_nr(arg)))) {
                     argp_usage(state);
                 }
-                arguments->pid_to_attach_to = (pid_t)parsed_attach_pid;
+                arguments->pause_on_scall_nr = syscall_nr;
+                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
             }
             break;
+
+#ifdef WITH_STACK_UNWINDING
+    /* Print stack when printing syscall */
+        case 'k':
+            arguments->print_stack_traces = true;
+            arguments->exec_arg_offset++;
+            break;
+#endif /* WITH_STACK_UNWINDING */
+
+    /* Trace only subset of syscalls */
+        case 'e':
+            {
+                arguments->trace_only_syscall_subset = true;
+                memset(arguments->syscall_subset_to_be_traced, 0,
+                       SYSCALLS_ARR_SIZE * sizeof(*(arguments->syscall_subset_to_be_traced)));
+
+                if (strchr(arg, ',')) {
+                    char* arg_copy = strdup(arg);
+                    if (!arg_copy) {
+                        LOG_ERROR_AND_EXIT("Not enough memory avaialable to duplicate arg-string");
+                    }
+
+                    char* pch = NULL;
+                    while ((pch = strtok((!pch) ? (arg_copy) : (NULL), ","))) {
+                        const long scall_nr = syscalls_get_nr(pch);
+                        if (-1 == scall_nr) {
+                            argp_usage(state);
+                        }
+                        arguments->syscall_subset_to_be_traced[scall_nr] = true;
+                    }
+
+                    free(arg_copy);
+                } else {
+                    const long scall_nr = syscalls_get_nr(arg);
+                    if (-1 == scall_nr) {
+                        argp_usage(state);
+                    }
+                    arguments->syscall_subset_to_be_traced[scall_nr] = true;
+                }
+                arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            }
+            break;
+
+    /* Daemonize tracer */
+        case 'D':
+            arguments->daemonize_tracer = true;
+            arguments->exec_arg_offset++;
+            break;
+
 
         case ARGP_KEY_ARG:
           /* Too many arguments */
@@ -157,13 +158,13 @@ void parse_cli_args(int argc, char** argv,
     parsed_cli_args_ptr->list_syscalls = false;
     parsed_cli_args_ptr->pid_to_attach_to = -1;
     parsed_cli_args_ptr->follow_fork = false;
+    parsed_cli_args_ptr->pause_on_scall_nr = -1;
 #ifdef WITH_STACK_UNWINDING
     parsed_cli_args_ptr->print_stack_traces = false;
 #endif /* WITH_STACK_UNWINDING */
-    parsed_cli_args_ptr->daemonize_tracer = false;
-    parsed_cli_args_ptr->pause_on_scall_nr = -1;
-    parsed_cli_args_ptr->exec_arg_offset = 0;
     parsed_cli_args_ptr->trace_only_syscall_subset = false;
+    parsed_cli_args_ptr->daemonize_tracer = false;
+    parsed_cli_args_ptr->exec_arg_offset = 0;
 
     static const struct argp argp = {
         cli_options, parse_cli_opt,
