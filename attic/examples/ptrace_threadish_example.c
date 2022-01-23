@@ -28,7 +28,7 @@
 #include <sys/types.h>
 #include <linux/ptrace.h>
 #include <sys/user.h>
-// #include <sys/prctl.h>
+#include <sys/prctl.h>
 #include <time.h>
 #include <string.h>
 #include <stdbool.h>
@@ -119,7 +119,7 @@ int tracee_routine(void *arg) {
         _shared_mem_test_bytes_writen += fprintf(voiiid, "Hello");
         _shared_mem_test_bytes_writen += fprintf(voiiid, " from");
         _shared_mem_test_bytes_writen += fprintf(voiiid, " tracee!");
-        _shared_mem_test_bytes_writen += fprintf(voiiid, "\n");
+        _shared_mem_test_bytes_writen += fprintf(voiiid, "      \n");
     }
 
     return 0;
@@ -264,6 +264,8 @@ int main(int argc, char** argv) {
     /* >>  Switched roles: "Child" (task reulting from `clone`(2)) = tracer, "Parent" = tracee   !!!  REQUIRES CURRENTLY kernel.yama.ptrace_scope=0 !!!  << */
       fputs(">>> Tracing roles: \"Parent\" = tracee, \"Child\" = tracer <<<\n\n\n", stdout);
 
+    /* Allow non-root child (= tracer) to trace parent (= tracee)   (ONLY PERTINENT when Yama ptrace_scope = 1 AND `PTRACE_ATTACH` is used) */
+      prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
 
       int (*clone_fn)(void*) = do_tracer;
 
@@ -273,11 +275,6 @@ int main(int argc, char** argv) {
 
 
       _perform_clone(clone_fn, child_stack + CHILD_STACK_SIZE, clone_flags, clone_arg, clone_parent_tid);
-      // TODO: Try to set permissions, e.g.,
-      // if (prctl(PR_SET_PTRACER, clone_parent_tid, 0, 0, 0)) {     /* Required when `sysctl kernel.yama.ptrace_scope` = 1 */
-      //     perror("Couldn't set tracing permissions");
-      //     exit(1);
-      // }
       tracee_routine(NULL);
     }
 
