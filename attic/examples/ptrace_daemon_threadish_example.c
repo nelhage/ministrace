@@ -86,6 +86,9 @@ int ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 /* ------------------ ------------------  ptrace stuff ------------------ ------------------ */
 
 
+/* -- Globals -- */
+static int _shared_mem_test_bytes_writen;   // Global for testing shared memory (only feasible when `CLONE_VM` was set)     (no volatile keyword necesssary (even w/ -O3) ??)
+
 
 static void inline _print_task_info(FILE* stream, char* tname) {
 	const int pid = getpid();
@@ -93,8 +96,6 @@ static void inline _print_task_info(FILE* stream, char* tname) {
               tname, gettid(), pid /*, getppid(), getpgrp(), getsid(pid) */ );
 }
 
-
-static int _shared_mem_test_bytes_writen;   // Global for testing shared memory (only feasible when `CLONE_VM` was set)     (no volatile keyword necesssary (even w/ -O3) ??)
 
 void run_tracee_busy_loop(void) {
     _print_task_info(stdout, "tracee");
@@ -157,7 +158,7 @@ static void _perform_clone(int (*fn)(void *), void* fn_arg) {
 
 
 /**
- * @brief "Inspects" tracee every 1s, printing the current IP-address + current stackframe
+ * @brief Tracer: "Inspects" tracee every 1s, printing the current IP-address + current stackframe
  *
  * @param arg_tracee_tid Pointer to tracee's tid
  * @return int Exit status
