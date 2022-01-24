@@ -32,7 +32,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include <stdatomic.h>
 
 
 /* ------------------ ------------------  ptrace stuff ------------------ ------------------ */
@@ -89,7 +89,7 @@ int ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 
 
 /* -- Globals -- */
-static int _shared_mem_test_bytes_writen;   // Global for testing shared memory (only feasible when `CLONE_VM` was set)     (no volatile keyword necesssary (even w/ -O3) ??)
+static atomic_int _shared_mem_test_bytes_writen;   // Global for testing shared memory (only feasible when `CLONE_VM` was set)     (no volatile keyword necesssary (even w/ -O3) ??)
 
 
 static void inline _print_task_info(FILE* stream, char* tname) {
