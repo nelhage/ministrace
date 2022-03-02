@@ -172,8 +172,10 @@ int do_tracer(tracer_options* options) {
 
             const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
 
-            if (options->syscall_subset_to_be_traced && !(options->syscall_subset_to_be_traced[syscall_nr])) {
-                continue;   /* Current "trapped" syscall shall not be traced -> don't print it */
+            if (NO_SYSCALL == syscall_nr ||                                /* "Trap" was, e.g., a signal */
+                (options->syscall_subset_to_be_traced &&
+                 !(options->syscall_subset_to_be_traced[syscall_nr]))) {   /* Current "trapped" syscall shall not be traced */
+                continue;
             }
 
             const char* scall_name = NULL;

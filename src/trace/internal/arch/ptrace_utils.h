@@ -23,6 +23,8 @@
 /* - Types - */
 #  define user_regs_struct_full user_regs_struct
 
+#define NO_SYSCALL (-1)
+
 /* - Macros for accessing registers (and other information) in `user_regs_struct` - */
 #  ifdef __x86_64__
 #    define USER_REGS_STRUCT_IP(regss)           (regss.rip)
