@@ -61,21 +61,28 @@ GENERATED_SRC_FILENAME = 'syscallents'
 
 # ----------------------------------------- ----------------------------------------- ----------------------------------------- -----------------------------------------
 class TBLParsedSyscall:
-    def __init__(self, number, abi, name, entry_point=None):
+    def __init__(self, src_file, src_line_nr, src_line,
+                        number, abi, name, entry_point=None):
+        self.src_file = src_file
+        self.src_line_nr = src_line_nr
+        self.src_line = src_line.replace("\n", "")
         self.number = int(number)
         self.abi = abi
         self.name = name
         self.entry_point = entry_point
 
+    def __str__(self):
+        return f"{self.src_file}:{self.src_line_nr}: {self.src_line}"
+
 
 class SRCFoundSyscallFragment:
-    def __init__(self, extracted_code_fragment, line_nr, file):
-        self.extracted_code_fragment = extracted_code_fragment
-        self.line_nr = line_nr
-        self.file = file.decode("utf-8").replace("\n", "")
+    def __init__(self, src_file, src_line_nr, src_line):
+        self.src_file = src_file.decode("utf-8").replace("\n", "")
+        self.src_line_nr = src_line_nr
+        self.src_line = src_line
 
     def __str__(self):
-        return f"{self.file}:{self.line_nr}: {self.extracted_code_fragment}"
+        return f"{self.src_file}:{self.src_line_nr}: {self.src_line}"
 
 
 class SRCParsedFoundSyscallFragment:
@@ -87,11 +94,13 @@ class SRCParsedFoundSyscallFragment:
 
 def parse_syscalls_name_and_nr_from_tbl(tbl_file: str) -> dict:
     syscalls = {}
-    for line in open(tbl_file):
+    for line_nr, line in enumerate( open(tbl_file) ):
         m = re.search(r'^(\d+)\t(.+?)\t(.+?)(?:\t+(.+))?$', line)       # <number> <abi> <name> <entry point>
         if m:
             (nr, abi, name, entry_point) = m.groups()
-            syscalls[int(nr)] = TBLParsedSyscall(nr, abi, name, entry_point)
+            syscalls[int(nr)] = TBLParsedSyscall(
+                tbl_file, line_nr, line,
+                nr, abi, name, entry_point)
     return syscalls
 
 
@@ -125,7 +134,7 @@ def find_and_parse_syscalls_args_from_src(linux_src_dir: str, arch_specific_src_
                     if syscall_name is not None:
 
                         syscalls_args[syscall_name] = SRCParsedFoundSyscallFragment(
-                            SRCFoundSyscallFragment(syscall_code_fragment, syscall_code_fragment_line_start, src_file_path),
+                            SRCFoundSyscallFragment(src_file_path, syscall_code_fragment_line_start, syscall_code_fragment),
                             parsed_syscall_args)
                     found_start_of_syscall_code_fragment = False
                     syscall_code_fragment_line_start = -1
@@ -167,7 +176,7 @@ def generate_src_files(kernel_version: str, cpu_arch: str,
     print(f"Writing parsed syscalls to {os.path.abspath(target_dir)}")
 
     generate_syscall_macro_name = lambda name, abi: f"__SNR_{'COMPAT_' if abi == arch_compat_abi else ''}{name}"
-    generated_file_disclaimer = f"/*\n * Generated file (for kernel version {kernel_version} on {cpu_arch}). Do not edit manually or check into VCS.\n *\n */"
+    generated_file_disclaimer = f"/*\n * Generated file (for kernel version {kernel_version} on {cpu_arch}). Do not edit manually or check in VCS.\n *\n */"
 
     with open(os.path.join(target_dir, src_filename + ".h"), 'w') as out_header:
         # - Header of header file -
@@ -178,9 +187,9 @@ def generate_src_files(kernel_version: str, cpu_arch: str,
 
         print(f"#include \"{GENERATED_HEADER_INCLUDE_TYPES_HEADER}\"\n", file=out_header)
 
-        print(f"#define TOTAL_NUM_SYSCALLS {len(syscalls_parsed_from_tbl.keys())}", file=out_header)
-        print(f"#define MAX_SYSCALL_NUM {max(syscalls_parsed_from_tbl.keys())}", file=out_header)
-        print("#define SYSCALLS_ARR_SIZE (MAX_SYSCALL_NUM + 1)\n\n", file=out_header)
+        print(f"#define TOTAL_NUM_SYSCALLS      {len(syscalls_parsed_from_tbl.keys())}", file=out_header)
+        print(f"#define MAX_SYSCALL_NUM         {max(syscalls_parsed_from_tbl.keys())}", file=out_header)
+        print("#define SYSCALLS_ARR_SIZE       (MAX_SYSCALL_NUM + 1)\n\n", file=out_header)
 
         # - Macro constants for indexing syscall array -
         print("/* -- Array index consts (see also header `<arch>-linux-gnu/asm/unistd_64.h`, e.g., for amd64 `/usr/include/x86_64-linux-gnu/asm/unistd_64.h`) -- */", file=out_header)
@@ -211,6 +220,8 @@ def generate_src_files(kernel_version: str, cpu_arch: str,
         for num in sorted(syscalls_parsed_from_tbl.keys()):
             syscall_name = syscalls_parsed_from_tbl[num].name
             syscall_abi = syscalls_parsed_from_tbl[num].abi
+
+            print(f"/* {syscalls_parsed_from_tbl[num]} */", file=out_cfile)
 
             if syscall_name in syscalls_parsed_from_scr:
                 syscall_code_fragment = syscalls_parsed_from_scr[syscall_name].found_code_fragment
