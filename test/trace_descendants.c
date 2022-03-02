@@ -22,7 +22,7 @@ void create_children(const int max_children) {
 
     pid_t child;
 /* Child */
-    if (! (child = DIE_WHEN_ERRNO(fork())) ) {
+    if (! (child = DIE_WHEN_ERRNO( fork() ) )) {
         nanosleep((const struct timespec[]){{0, 300000000L}}, NULL);
         printf("Descendant #%2d: pid=%d, ppid=%d\n", child_count, getpid(), getppid());
 
@@ -39,7 +39,7 @@ void create_children(const int max_children) {
         }
 
         int status;
-        DIE_WHEN_ERRNO(waitpid(child, &status, 0));
+        DIE_WHEN_ERRNO( waitpid(child, &status, 0) );
 
         if (0 == descendent_nr) {
             printf("--- MAIN ---  : ");

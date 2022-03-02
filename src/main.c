@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
             child_args_offset++;
         }
 
-        const pid_t childs_pid = DIE_WHEN_ERRNO(fork());
+        const pid_t childs_pid = DIE_WHEN_ERRNO( fork() );
         if (!tracer_options.daemonize) {
         /* Roles:  Tracer = Parent,  Tracee = Child */
             tracer_options.tracee_pid = childs_pid;

@@ -41,9 +41,7 @@ int do_tracee(int argc, char** argv,
          *                       process) to stop it & notify the parent(via `wait`),
          *                       so that the parent knows to start tracing
          */
-        if (ptrace(PTRACE_TRACEME) < 0) {
-            LOG_ERROR_AND_EXIT("ptrace(PTRACE_TRACEME)");
-        }
+        DIE_WHEN_ERRNO( ptrace(PTRACE_TRACEME) );
 
         /* Stop oneself so tracer can set ptrace options (+ tracer will see the `exec` syscall)
          *    -> Tracer will resume execution w/ `PTRACE_SYSCALL`
@@ -68,7 +66,7 @@ int do_tracee(int argc, char** argv,
 /* - Tracing - */
 int do_tracer(tracer_options* options) {
     if (options->daemonize) {
-		const pid_t pid = DIE_WHEN_ERRNO(fork());
+		const pid_t pid = DIE_WHEN_ERRNO( fork() );
     /* parent */
 		if (pid) {
 			/*
@@ -104,7 +102,7 @@ int do_tracer(tracer_options* options) {
          *                     will not necessarily have stopped by the
          *                     completion of this call => hence, use `waitpid`(2)
          */
-        DIE_WHEN_ERRNO(ptrace(PTRACE_ATTACH, tracee_pid));
+        DIE_WHEN_ERRNO( ptrace(PTRACE_ATTACH, tracee_pid) );
     }
     /* ELSE: tracee (= child) did `PTRACE_TRACEME`, hence, nothing to do in tracer (= parent)  */
 
@@ -116,7 +114,7 @@ int do_tracer(tracer_options* options) {
      */
     int tracee_status;
     do {
-        DIE_WHEN_ERRNO(waitpid(tracee_pid, &tracee_status, 0));
+        DIE_WHEN_ERRNO( waitpid(tracee_pid, &tracee_status, 0) );
     } while(!WIFSTOPPED(tracee_status));
 
 /* 0b. Setup: Set ptrace options */
@@ -261,7 +259,7 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *                         passes the signal to the tracee in the next ptrace restart request.
          */
         if (-1 != tid) {        /* Allow function to ONLY WAIT (e.g., when prior child terminated) */
-            DIE_WHEN_ERRNO(ptrace(PTRACE_SYSCALL, tid, 0, sig));
+            DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, tid, 0, sig) );
         }
 
         /* Reset restart signal */
@@ -274,7 +272,7 @@ int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *               See also https://kernelnewbies.kernelnewbies.narkive.com/9Zd9eWeb/waitpid-2-and-clone-thread
          */
         int tracee_status;
-        pid_t wait_tid = DIE_WHEN_ERRNO(waitpid(-1, &tracee_status, __WALL));
+        pid_t wait_tid = DIE_WHEN_ERRNO( waitpid(-1, &tracee_status, __WALL) );
 
 
         /* (2) Check tracee's process status */
