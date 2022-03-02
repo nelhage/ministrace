@@ -26,7 +26,7 @@ detail how it works.
 * See [main.c](src/main.c)
 
 
-## 2. Compile
+## 2. Build
 ### 2.1. Prerequisites
 * Downloaded Linux kernel sources (required for parsing syscalls)
   * Steps for Ubuntu:
@@ -36,7 +36,7 @@ detail how it works.
   * On Ubuntu: `sudo snap install cmake --classic` + `sudo apt install -y cmake-curses-gui`
 
 ### 2.2. Requirements based on chosen cmake options
-* Option `WITH_STACK_UNWINDING`: Installed `libunwind-dev` + `libiberty-dev` (`sudo apt install -y libunwind-dev libiberty-dev`)
+* Option `WITH_STACK_UNWINDING`: Installed *libunwind*, *libiberty* and *libdwfl* (`sudo apt install -y libunwind-dev libiberty-dev libdw-dev`)
 
 
 ### 2.3. Out-of-source build
