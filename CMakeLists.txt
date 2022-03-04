@@ -1,7 +1,7 @@
 project(ministrace)
 
 
-# -- Project settings --
+# -- CMake project settings --
 cmake_minimum_required(VERSION 3.3.2)
 set(CMAKE_C_STANDARD 99)
 # set(CMAKE_C_COMPILER clang)
