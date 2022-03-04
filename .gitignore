@@ -81,7 +81,6 @@ nbproject/
 
 # -- More specific stuff --
 # - Python scripts -
-
 # Byte-compiled / optimized
 __pycache__/
 *.py[cod]
