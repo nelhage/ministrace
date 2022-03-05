@@ -20,6 +20,8 @@
 
 #include <stdbool.h>
 
+#include "../src/common/error.h"
+
 
 /* -- Signal handlers -- */
 void child_signal_handler(int sig) {
@@ -128,21 +130,23 @@ void parent_signal_handler(int sig) {
 
 
 void register_sig_handlers(void(*sig_handler_func_ptr)(int)) {
-    struct sigaction action;
-    action.sa_flags = SA_RESTART;
-    sigemptyset(&action.sa_mask);   /* Mask no signals during execution of handler */
-    action.sa_handler = sig_handler_func_ptr;
+    struct sigaction sa;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset(&sa.sa_mask);   /* Mask no signals during execution of handler */
+    sa.sa_handler = sig_handler_func_ptr;
 
-    sigaction(SIGSTOP, &action, NULL);        /* cannot be handled */
-    sigaction(SIGCONT, &action, NULL);
-    sigaction(SIGINT, &action, NULL);
-    sigaction(SIGTERM, &action, NULL);
-    sigaction(SIGQUIT, &action, NULL);
-    sigaction(SIGKILL, &action, NULL);        /* cannot be handled */
-    sigaction(SIGUSR1, &action, NULL);
-    sigaction(SIGUSR2, &action, NULL);
-    sigaction(SIGCHLD, &action, NULL);
-    sigaction(SIGHUP, &action, NULL);
+    if (
+          // sigaction(SIGSTOP, &sa, NULL) == -1 ||             /* cannot be handeled */
+          sigaction(SIGCONT, &sa, NULL) == -1 ||
+          sigaction(SIGINT, &sa, NULL) == -1 ||
+          sigaction(SIGTERM, &sa, NULL) == -1 ||
+          sigaction(SIGQUIT, &sa, NULL) == -1 ||
+          // sigaction(SIGKILL, &sa, NULL) == -1 ||             /* cannot be handeled */
+          sigaction(SIGUSR1, &sa, NULL) == -1 ||
+          sigaction(SIGUSR2, &sa, NULL) == -1
+    ) {
+        LOG_ERROR_AND_EXIT("Couldn't register signal handler");
+    }
 }
 
 
@@ -171,7 +175,7 @@ loop:
 
 
 void usage(char** argv) {
-    fprintf(stderr, "Usage: %s [--loop] [--fork|--pthread]\n", argv[0]);
+    fprintf(stderr, "Usage: %s [--loop] [--fork | --pthread]\n", argv[0]);
 }
 
 typedef struct cli_args {
@@ -228,16 +232,12 @@ int main(int argc, char** argv) {
 
     if (args.fork) {
         puts("Forking child ...");
-        pid_t child_pid = fork();
-        if (-1 == child_pid) {
-            fprintf(stderr, "Failed forking\n");
-            exit(1);
-        }
+        const pid_t child_pid = DIE_WHEN_ERRNO( fork() );
 
         routine((routine_arg[]){{ .pname = (!child_pid) ? "Child" : "Parent", .loop=args.loop, .sig_handler_func_ptr=(!child_pid) ? &child_signal_handler : &parent_signal_handler }});
 
         if (child_pid) {
-            wait(NULL);         /* Wait for child process to exit */
+            DIE_WHEN_ERRNO( wait(NULL) );         /* Wait for child process to exit */
         }
 
     } else if (args.pthread) {
