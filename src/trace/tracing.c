@@ -46,10 +46,12 @@ int do_tracee(int argc, char** argv,
         /* Stop oneself so tracer can set ptrace options (+ tracer will see the `exec` syscall)
          *    -> Tracer will resume execution w/ `PTRACE_SYSCALL`
          */
-        kill(getpid(), SIGSTOP);
-    } else {
+        DIE_WHEN_ERRNO( kill(getpid(), SIGSTOP) );
+    }
+
+    else {
     /* Allow non-root child (= tracer) to trace parent (= tracee)   (ONLY PERTINENT when Yama ptrace_scope = 1 AND `PTRACE_ATTACH` is used) */
-        prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
+        DIE_WHEN_ERRNO( prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY) );
 
     /* `kill`(2) sent from grandchild (= tracer) to child will wake us up   -> `wait`(2) & reap child  */
         /* we depend on SIGCHLD set to SIG_DFL by init code */
@@ -59,7 +61,7 @@ int do_tracee(int argc, char** argv,
 
 /* Execute actual program */
     return execvp(tracee_exec_argv[0], tracee_exec_argv);
-    LOG_ERROR_AND_EXIT("Exec'ing \"%s\" failed", tracee_exec_argv[0]);
+    LOG_ERROR_AND_EXIT("Exec'ing \"%s\" failed (errno=%d)", tracee_exec_argv[0], errno);
 }
 
 
@@ -133,7 +135,7 @@ int do_tracer(tracer_options* options) {
         ptrace_setoptions |= PTRACE_O_TRACECLONE
                            | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
     }
-    ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions);
+    DIE_WHEN_ERRNO( ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions) );
 
 
 #ifdef WITH_STACK_UNWINDING
