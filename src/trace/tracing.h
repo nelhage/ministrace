@@ -16,13 +16,13 @@ typedef struct {
 #ifdef WITH_STACK_UNWINDING
   bool print_stacktrace;
 #endif /* WITH_STACK_UNWINDING */
-} tracer_options;
+} tracer_options_t;
 
 
 /* -- Function prototypes -- */
 int do_tracee(int argc, char** argv,
-              tracer_options* options);
-int do_tracer(tracer_options* options);
+              tracer_options_t* options);
+int do_tracer(tracer_options_t* options);
 
 
 #endif /* TRACING_H */

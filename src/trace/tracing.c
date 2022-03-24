@@ -29,7 +29,7 @@ void _wait_for_user_input(void);
 
 /* -- Functions -- */
 int do_tracee(int argc, char** argv,
-              tracer_options* tracer_options) {
+              tracer_options_t* tracer_options) {
 /* exec setup: Create new array for argv of to be exec'd command */
     char *tracee_exec_argv[argc + 1 /* NULL terminator */];     /* Use VLA (instead of `malloc`(3)) */
     memcpy(tracee_exec_argv, argv, (argc * sizeof(argv[0])));
@@ -66,7 +66,7 @@ int do_tracee(int argc, char** argv,
 
 
 /* - Tracing - */
-int do_tracer(tracer_options* options) {
+int do_tracer(tracer_options_t* options) {
     if (options->daemonize) {
 		const pid_t pid = DIE_WHEN_ERRNO( fork() );
     /* parent */

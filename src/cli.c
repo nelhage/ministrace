@@ -18,7 +18,7 @@ bool __arg_was_passed_as_single_arg(char* arg) {
 
 
 static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
-    cli_args *arguments = state->input;
+    cli_args_t *arguments = state->input;
 
     switch (key) {
     /* List syscalls (and exit) */
@@ -137,7 +137,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
 
 
 void parse_cli_args(int argc, char** argv,
-                    cli_args* parsed_cli_args_ptr) {
+                    cli_args_t* parsed_cli_args_ptr) {
     static const struct argp_option cli_options[] = {
         {"list-syscalls", 'l', NULL,          0, "List supported system calls",                                                    0},
         {"attach",        'p', "pid",         0, "Attach to already running process",                                              1},

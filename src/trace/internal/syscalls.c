@@ -19,7 +19,7 @@ static inline long _from_regs_struct_get_syscall_arg(struct user_regs_struct_ful
 /* -- Functions -- */
 const char *syscalls_get_name(long syscall_nr) {
     if (syscall_nr >= 0 && syscall_nr <= MAX_SYSCALL_NUM) {
-        const syscall_entry* const scall = &syscalls[syscall_nr];
+        const syscall_entry_t* const scall = &syscalls[syscall_nr];
         if (scall->name) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
             return scall->name;
         }
@@ -29,7 +29,7 @@ const char *syscalls_get_name(long syscall_nr) {
 
 long syscalls_get_nr(char* syscall_name) {
     for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
-        const syscall_entry* const scall = &syscalls[i];
+        const syscall_entry_t* const scall = &syscalls[i];
         if (scall->name && !strcmp(syscall_name, scall->name)) {  /* NOTE: Syscall-nrs may be non-consecutive (i.e., array has empty slots) */
             return i;
         }
@@ -41,7 +41,7 @@ long syscalls_get_nr(char* syscall_name) {
 void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_struct_full *regs) {   // `user_regs_struct_full *regs` only for efficiency's sake (not necessary, could be fetched again ...)
     const long syscall_nr = USER_REGS_STRUCT_SC_NO((*regs));
 
-    const syscall_entry* ent = NULL;
+    const syscall_entry_t* ent = NULL;
     int nargs = SYSCALL_MAX_ARGS;
 
     if ((syscall_nr >= 0 && syscall_nr <= MAX_SYSCALL_NUM) && syscalls[syscall_nr].name) {
@@ -112,7 +112,7 @@ void syscalls_print_all(void) {
     printf("%4s\t%20s\t%3s\t%s\n", "--", "----", "-----", "---------------");
 
     for (int i = 0; i < SYSCALLS_ARR_SIZE; i++) {
-        const syscall_entry* const scall = &syscalls[i];
+        const syscall_entry_t* const scall = &syscalls[i];
         if (NULL != scall->name) {
             printf("%4d\t%20s\t%3d\t", i, scall->name, scall->nargs);
             for (int j = 0; j < SYSCALL_MAX_ARGS; j++) {

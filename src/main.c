@@ -29,7 +29,7 @@
 
 int main(int argc, char **argv) {
 /* 0. Parse CLI args */
-    cli_args parsed_cli_args;
+    cli_args_t parsed_cli_args;
     parse_cli_args(argc, argv, &parsed_cli_args);
 
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     }
 
 
-    tracer_options tracer_options = {
+    tracer_options_t tracer_options = {
         .tracee_pid = parsed_cli_args.pid_to_attach_to,           /* May be later overwritten when not attaching */
         .attach_to_tracee = (-1 != parsed_cli_args.pid_to_attach_to),
         .pause_on_syscall_nr = parsed_cli_args.pause_on_scall_nr,

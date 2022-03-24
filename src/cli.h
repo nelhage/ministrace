@@ -25,11 +25,11 @@ typedef struct {
     bool syscall_subset_to_be_traced[SYSCALLS_ARR_SIZE];
 
     int exec_arg_offset;
-} cli_args;
+} cli_args_t;
 
 
 /* -- Function prototypes -- */
 void parse_cli_args(int argc, char** argv,
-                    cli_args* parsed_cli_args_ptr);
+                    cli_args_t* parsed_cli_args_ptr);
 
 #endif /* CLI_H */
