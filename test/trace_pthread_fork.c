@@ -23,6 +23,59 @@
 #include "../src/common/error.h"
 
 
+
+/* -- CLI stuff -- */
+#define CLI_FORK_OPTION    "--fork"
+#define CLI_PTHREAD_OPTION "--pthread"
+#define CLI_LOOP_OPTION    "--loop"
+#define CLI_HELP_OPTION    "--help"
+
+void usage(char** argv) {
+    fprintf(stderr, "Usage: %s ["CLI_LOOP_OPTION"] ["CLI_FORK_OPTION" | "CLI_PTHREAD_OPTION"]\n", argv[0]);
+}
+
+typedef struct {
+    bool loop;
+    bool fork;
+    bool pthread;
+} cli_args_t;
+
+int parse_cli_args(int argc, char** argv, cli_args_t* args) {
+    /* - Defaults - */
+    args->loop = false;
+    args->fork = false;
+    args->pthread = false;
+
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(CLI_HELP_OPTION, argv[i])) {
+            usage(argv);
+            exit(0);
+        }
+
+        if (!strcmp(CLI_LOOP_OPTION, argv[i])) {
+            args->loop = true;
+            continue;
+        }
+
+        if (!strcmp(CLI_FORK_OPTION, argv[i])) {
+            args->fork = true;
+            continue;
+        }
+
+        if (!strcmp(CLI_PTHREAD_OPTION, argv[i])) {
+            args->pthread = true;
+            continue;
+        }
+
+        return -1;              /* Unrecognized option */
+    }
+
+    return (args->fork && args->pthread) ? (-1) : (0);        /* `fork` & `pthread` are mutually eXclusive */
+}
+
+
+
+
 /* -- Signal handlers -- */
 void child_signal_handler(int sig) {
     int old_errno = errno;
@@ -128,7 +181,6 @@ void parent_signal_handler(int sig) {
     errno = old_errno;
 }
 
-
 void register_sig_handlers(void(*sig_handler_func_ptr)(int)) {
     struct sigaction sa;
     sa.sa_flags = SA_RESTART;
@@ -136,120 +188,86 @@ void register_sig_handlers(void(*sig_handler_func_ptr)(int)) {
     sa.sa_handler = sig_handler_func_ptr;
 
     if (
-          // sigaction(SIGSTOP, &sa, NULL) == -1 ||             /* cannot be handeled */
-          sigaction(SIGCONT, &sa, NULL) == -1 ||
-          sigaction(SIGINT, &sa, NULL) == -1 ||
-          sigaction(SIGTERM, &sa, NULL) == -1 ||
-          sigaction(SIGQUIT, &sa, NULL) == -1 ||
-          // sigaction(SIGKILL, &sa, NULL) == -1 ||             /* cannot be handeled */
-          sigaction(SIGUSR1, &sa, NULL) == -1 ||
-          sigaction(SIGUSR2, &sa, NULL) == -1
-    ) {
+        // sigaction(SIGSTOP, &sa, NULL) == -1 ||             /* cannot be handled */
+            sigaction(SIGCONT, &sa, NULL) == -1 ||
+            sigaction(SIGINT, &sa, NULL) == -1 ||
+            sigaction(SIGTERM, &sa, NULL) == -1 ||
+            sigaction(SIGQUIT, &sa, NULL) == -1 ||
+            // sigaction(SIGKILL, &sa, NULL) == -1 ||             /* cannot be handled */
+            sigaction(SIGUSR1, &sa, NULL) == -1 ||
+            sigaction(SIGUSR2, &sa, NULL) == -1
+            ) {
         LOG_ERROR_AND_EXIT("Couldn't register signal handler");
     }
 }
 
 
-
-typedef struct routine_arg {
+/* -- Actual test program -- */
+typedef struct {
     char* pname;
     bool loop;
     void(*sig_handler_func_ptr)(int);
-} routine_arg;
+} routine_arg_t;
 
 void* routine(void* arg) {
-    const char* const pname = ((routine_arg*)arg)->pname;
-    const bool loop = ((routine_arg*)arg)->loop;
-    void(*sig_handler_func_ptr)(int) = ((routine_arg*)arg)->sig_handler_func_ptr;
+    const char* const pname = ((routine_arg_t*)arg)->pname;
+    const bool loop = ((routine_arg_t*)arg)->loop;
+    void(*sig_handler_func_ptr)(int) = ((routine_arg_t*)arg)->sig_handler_func_ptr;
 
     register_sig_handlers(sig_handler_func_ptr);
 
-loop:
-    printf("tid = %5d, pid = %5d, ppid = %5d, pgid = %5d, sid = %5d [%s]\n",
-            gettid(), getpid(), getppid(), getpgid(0), getsid(0), pname);
-    nanosleep((const struct timespec[]){{3, 500000000L}}, NULL);
-    if (loop) { goto loop; }
+    do {
+        fprintf(stdout, "tid = %5d, pid = %5d, ppid = %5d, pgid = %5d, sid = %5d [%s]\n",
+                gettid(), getpid(), getppid(), getpgid(0), getsid(0), pname);
+        nanosleep((const struct timespec[]){{3, 250000000L}}, NULL);
+    } while(loop);
 
     return NULL;
 }
 
 
-void usage(char** argv) {
-    fprintf(stderr, "Usage: %s [--loop] [--fork | --pthread]\n", argv[0]);
-}
-
-typedef struct cli_args {
-    bool loop;
-    bool fork;
-    bool pthread;
-} cli_args;
-
-int parse_cli_args(int argc, char** argv, cli_args* args) {
-  /* - Defaults - */
-    args->loop = false;
-    args->fork = false;
-    args->pthread = false;
-
-    for (int i=1; i<argc; i++) {
-        if (!strcmp("--help", argv[i])) {
-            usage(argv);
-            exit(0);
-        }
-
-        if (!strcmp("--loop", argv[i])) {
-            args->loop = true;
-            continue;
-        }
-
-        if (!strcmp("--fork", argv[i])) {
-            args->fork = true;
-            continue;
-        }
-
-        if (!strcmp("--pthread", argv[i])) {
-            args->pthread = true;
-            continue;
-        }
-
-        return -1;              /* Unrecognized option */
-    }
-
-    return (args->fork && args->pthread) ? (-1) : (0);        /* `fork` & `pthread` are mutually eXclusive */
-}
-
-
 int main(int argc, char** argv) {
 
-    cli_args args;
+    cli_args_t args;
     if (-1 == parse_cli_args(argc, argv, &args)) {
         usage(argv);
         return(1);
     }
 
     /* Disable IO buffering for stdout */
-    setvbuf(stdout, NULL, _IONBF, 0);
+    if (0 != setvbuf(stdout, NULL, _IONBF, 0)) {
+        LOG_WARN("Couldn't change buffering for `stdout`");
+    }
 
-
+/* - fork - */
     if (args.fork) {
         puts("Forking child ...");
         const pid_t child_pid = DIE_WHEN_ERRNO( fork() );
 
-        routine((routine_arg[]){{ .pname = (!child_pid) ? "Child" : "Parent", .loop=args.loop, .sig_handler_func_ptr=(!child_pid) ? &child_signal_handler : &parent_signal_handler }});
+        routine((routine_arg_t[]){{ .pname = (!child_pid) ? "Child" : "Parent", .loop=args.loop, .sig_handler_func_ptr=(!child_pid) ? &child_signal_handler : &parent_signal_handler }});
 
         if (child_pid) {
             DIE_WHEN_ERRNO( wait(NULL) );         /* Wait for child process to exit */
         }
 
+/* - pthread - */
     } else if (args.pthread) {
         puts("Creating additional thread ...");
         pthread_t t1;
-        pthread_create(&t1, NULL, routine, (routine_arg[]){{ .pname = "Thread-1", .loop=args.loop, .sig_handler_func_ptr = &child_signal_handler }});      // NOTE: Child-thread will overwrite parent's signal handler ??
-        routine((routine_arg[]){{ .pname = "Thread-0", .loop=args.loop, .sig_handler_func_ptr = &parent_signal_handler }});
+
+        //pthread_create(&t1, NULL, routine, (routine_arg_t[]){{ .pname = "Thread-1", .loop=args.loop, .sig_handler_func_ptr = &child_signal_handler }});
+        // Checking (as shown above) causes it to print "Thread-0" (instead of "Thread-1")
+        if (0 != pthread_create(&t1, NULL, routine, (routine_arg_t[]){{ .pname = "Thread-1", .loop=args.loop, .sig_handler_func_ptr = &child_signal_handler }}) ) {      // NOTE: Child-thread will overwrite parent's signal handler ??
+            LOG_ERROR_AND_EXIT("Couldn't create additional thread!");
+        }
+
+        routine((routine_arg_t[]){{ .pname = "Thread-0", .loop=args.loop, .sig_handler_func_ptr = &parent_signal_handler }});
         pthread_join(t1, NULL);
 
+/* - default (single threaded) - */
     } else {
         puts("Running single threaded ...");
-        routine((routine_arg[]){{ .pname = "Thread-1", .loop=args.loop, .sig_handler_func_ptr = &parent_signal_handler }});
+        routine((routine_arg_t[]){{ .pname = "Thread-0", .loop=args.loop, .sig_handler_func_ptr = &parent_signal_handler }});
     }
 
     return 0;
