@@ -117,7 +117,7 @@ int do_tracer(tracer_options_t* options) {
     int tracee_status;
     do {
         DIE_WHEN_ERRNO( waitpid(tracee_pid, &tracee_status, 0) );
-    } while(!WIFSTOPPED(tracee_status));
+    } while (!WIFSTOPPED(tracee_status));
 
 /* 0b. Setup: Set ptrace options */
     /* ELUCIDATION:
@@ -130,13 +130,12 @@ int do_tracer(tracer_options_t* options) {
      *                              `waitpid(2)` by the tracer will return a status value such that
      *                              `status>>8 == (SIGTRAP | (PTRACE_EVENT_CLONE<<8))`
      */
-    unsigned int ptrace_setoptions = PTRACE_O_TRACESYSGOOD;
-    if (options->follow_fork) {
-        ptrace_setoptions |= PTRACE_O_TRACECLONE
-                           | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
-    }
-    DIE_WHEN_ERRNO( ptrace(PTRACE_SETOPTIONS, tracee_pid, 0, ptrace_setoptions) );
-
+    DIE_WHEN_ERRNO( ptrace(PTRACE_SETOPTIONS,
+                           tracee_pid,
+                           0,
+                           PTRACE_O_TRACESYSGOOD | ((options->follow_fork) ?
+                                (PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK) :
+                                (0))) );
 
 #ifdef WITH_STACK_UNWINDING
     if (options->print_stacktrace) {
@@ -148,19 +147,18 @@ int do_tracer(tracer_options_t* options) {
 /* 1. Trace */
     int tracee_exit_status = -1;
     pid_t cur_tid = tracee_pid;
-    while(1) {
+    while (1) {
         /* Wait for a child to change state (stop or terminate) */
         const pid_t status_tid = wait_for_syscall_or_exit(cur_tid, &tracee_exit_status);
 
         /* Check status */
         /*   -> Thread terminated (indicated via negative int) */
         if (0 > status_tid) {
+            fprintf(stderr, "\n+++ [%d] terminated w/ %d +++\n", -(status_tid), tracee_exit_status);
+
             if (-(tracee_pid) == status_tid) {
-                fprintf(stderr, "\n+++ [%d] (parent) terminated +++\n", -(status_tid));
                 break;
             } else {
-                fprintf(stderr, "\n+++ [%d] (child) terminated +++\n", -(status_tid));
-
                 cur_tid = -1;
                 continue;
             }
@@ -173,7 +171,6 @@ int do_tracer(tracer_options_t* options) {
             ptrace_get_regs_content(cur_tid, &regs);
 
             const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
-
             if (NO_SYSCALL == syscall_nr ||                                /* "Trap" was, e.g., a signal */
                 (options->syscall_subset_to_be_traced &&
                  !(options->syscall_subset_to_be_traced[syscall_nr]))) {   /* Current "trapped" syscall shall not be traced */
@@ -182,7 +179,7 @@ int do_tracer(tracer_options_t* options) {
 
             const char* scall_name = NULL;
             if (!(scall_name = syscalls_get_name(syscall_nr))) {
-                LOG_WARN("Unknown syscall w/ nr %ld", syscall_nr);
+                LOG_WARN("Unknown syscall w/ nr=%ld", syscall_nr);
                 static char fallback_generic_syscall_name[128];
                 snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
                 scall_name = fallback_generic_syscall_name;
@@ -230,6 +227,7 @@ int do_tracer(tracer_options_t* options) {
     }
 #endif /* WITH_STACK_UNWINDING */
 
+    fprintf(stderr, "+++ exited w/ %d +++\n", tracee_exit_status);
     return tracee_exit_status;
 }
 
