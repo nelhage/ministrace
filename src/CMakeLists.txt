@@ -11,6 +11,7 @@ set(SOURCES
         common/string_utils.c
         trace/internal/arch/ptrace_utils.c
         trace/internal/ptrace_utils.c
+        trace/internal/syscall_types.c
         trace/internal/syscalls.c
         trace/tracing.c
         cli.c
@@ -54,7 +55,6 @@ add_custom_command(
         COMMENT "Parse syscalls from kernel source and generate source files"
         DEPENDS ${GEN_SYSCALLS_SCRIPT}
         OUTPUT "${GEN_SYSCALLS_TARGET_DIR}/syscallents.c" "${GEN_SYSCALLS_TARGET_DIR}/syscallents.h"
-
         COMMAND ${CMAKE_COMMAND} -E make_directory ${GEN_SYSCALLS_TARGET_DIR}
         COMMAND ${PYTHON_EXECUTABLE} ${GEN_SYSCALLS_SCRIPT} ${LINUX_SRC_DIR} ${GEN_SYSCALLS_TARGET_DIR})
 

@@ -12,10 +12,9 @@
 
 
 /* -- Functions -- */
-bool __arg_was_passed_as_single_arg(char* arg) {
+static bool arg_was_passed_as_single_arg(char* arg) {
     return !strncmp("-", arg, strlen("-"));   /* CLI arg+option can be 1 arg when passed as `arg=val` or 2 when `arg val` */
 }
-
 
 static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
     cli_args_t *arguments = state->input;
@@ -53,7 +52,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                 argp_usage(state);
             }
             arguments->pause_on_scall_nr = (int)parsed_syscall_nr;
-            arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            arguments->exec_arg_offset += arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
         }
             break;
 
@@ -66,7 +65,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                 argp_usage(state);
             }
             arguments->pause_on_scall_nr = syscall_nr;
-            arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            arguments->exec_arg_offset += arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
         }
             break;
 
@@ -106,7 +105,7 @@ static error_t parse_cli_opt(int key, char *arg, struct argp_state *state) {
                 }
                 arguments->syscall_subset_to_be_traced[scall_nr] = true;
             }
-            arguments->exec_arg_offset += __arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
+            arguments->exec_arg_offset += arg_was_passed_as_single_arg(state->argv[state->next - 1]) ? (1) : (2);
         }
             break;
 

@@ -25,7 +25,7 @@ static unw_addr_space_t _unw_as;
 
 
 /* -- Function prototypes -- */
-Dwfl* _init_ldw_for_proc(pid_t tid);
+static Dwfl* init_ldw_for_proc(pid_t tid);
 
 
 /* -- Functions -- */
@@ -72,7 +72,7 @@ void unwind_print_backtrace_of_tid(pid_t tid) {
         LOG_ERROR_AND_EXIT("libunwind context initialization error");
     }
 
-    Dwfl* dwfl = _init_ldw_for_proc(tid);
+    Dwfl* dwfl = init_ldw_for_proc(tid);
 
 
 /* -- Print frames in execution stack of process -- */
@@ -143,7 +143,7 @@ void unwind_print_backtrace_of_tid(pid_t tid) {
 }
 
 
-Dwfl* _init_ldw_for_proc(pid_t tid) {
+static Dwfl* init_ldw_for_proc(pid_t tid) {
     static const Dwfl_Callbacks dwfl_callbacks = {
         .find_elf = dwfl_linux_proc_find_elf,
         .find_debuginfo = dwfl_standard_find_debuginfo

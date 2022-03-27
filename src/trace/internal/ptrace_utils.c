@@ -8,12 +8,13 @@
 
 #include "../../common/error.h"
 
-
+/* -- Consts -- */
 #ifndef PRINT_COMPLETE_STRING_ARGS
 #  define STRING_MAX_WORDS_TO_BE_READ 25
 #endif /* PRINT_COMPLETE_STRING_ARGS */
 
 
+/* -- Functions -- */
 char *ptrace_read_string(pid_t tid, unsigned long addr) {
     size_t read_bytes = 0;
     unsigned long ptrace_read_word;

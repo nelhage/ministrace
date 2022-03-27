@@ -20,10 +20,10 @@
 /* ----------------------- ----------------------- amd64 / i386 ----------------------- ----------------------- */
 #if defined(__x86_64__) || defined(__i386__)
 
-/* - Types - */
+/* -- Macros -- */
 #  define user_regs_struct_full user_regs_struct
 
-#define NO_SYSCALL (-1)
+#  define NO_SYSCALL (-1)
 
 /* - Macros for accessing registers (and other information) in `user_regs_struct` - */
 #  ifdef __x86_64__
@@ -56,7 +56,7 @@
 // /* ----------------------- -----------------------   arm64    ----------------------- ----------------------- */
 // #elif defined(__aarch64__)
 //
-// /* - Types - */
+// /* -- Macros / Types -- */
 // struct user_regs_struct_full {
 //   __extension__ union {                  /* `__extension__` to disable anonymous struct/union warning */
 //     struct user_regs_struct user_regs;   /* Required to ensure correct alignment ?? */
@@ -70,7 +70,7 @@
 //   int syscallno;
 // };
 //
-// #define NO_SYSCALL (-1)
+// #  define NO_SYSCALL (-1)
 //
 // /* - Macros for accessing registers (and other information) in `user_regs_struct` - */
 // // (sno = x8, args = x0 to x5, rtn value = x0)
@@ -92,6 +92,5 @@
 #  error "Unsupported CPU arch"
 
 #endif
-
 
 #endif /* PTRACE_UTILS_ARCH_H */

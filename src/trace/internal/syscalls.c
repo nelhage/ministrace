@@ -12,8 +12,8 @@
 
 
 /* -- Function prototypes -- */
-static void _fprint_str_esc(FILE* restrict stream, char *str);
-static inline long _from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs, int which);
+static void fprint_str_esc(FILE* restrict stream, char *str);
+static long from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs, int which);
 
 
 /* -- Functions -- */
@@ -52,7 +52,7 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
     }
 
     for (int arg_nr = 0; arg_nr < nargs; arg_nr++) {
-        long arg = _from_regs_struct_get_syscall_arg(regs, arg_nr);
+        long arg = from_regs_struct_get_syscall_arg(regs, arg_nr);
         long type = ent ? ent->args[arg_nr] : ARG_PTR;      /* Default to `ARG_PTR` */
         switch (type) {
             case ARG_INT:
@@ -62,7 +62,7 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
                 char* strval = ptrace_read_string(tid, arg);
 
                 // fprintf(stderr, "\"%s\"", strval);
-                fprintf(stderr, "\""); _fprint_str_esc(stderr, strval); fprintf(stderr, "\"");
+                fprintf(stderr, "\""); fprint_str_esc(stderr, strval); fprintf(stderr, "\"");
 
                 free(strval);
                 break;
@@ -76,7 +76,7 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
     }
 }
 
-static inline long _from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs, int which) {
+static long from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs, int which) {
     switch (which) {
         case 0: return USER_REGS_STRUCT_SC_ARG0((*regs));
         case 1: return USER_REGS_STRUCT_SC_ARG1((*regs));
@@ -92,7 +92,7 @@ static inline long _from_regs_struct_get_syscall_arg(struct user_regs_struct_ful
 /*
  * Prints ASCII control chars in `str` using a hex representation
  */
-static void _fprint_str_esc(FILE *stream, char *str) {
+static void fprint_str_esc(FILE *stream, char *str) {
     setlocale(LC_ALL, "C");
 
     for (int i = 0; '\0' != str[i]; i++) {

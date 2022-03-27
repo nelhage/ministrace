@@ -23,8 +23,8 @@
 
 
 /* -- Function prototypes -- */
-int _wait_for_syscall_or_exit(pid_t tid, int *exit_status);
-void _wait_for_user_input(void);
+static int wait_for_syscall_or_exit(pid_t tid, int *exit_status);
+static void wait_for_user_input(void);
 
 
 /* -- Functions -- */
@@ -150,7 +150,7 @@ int do_tracer(tracer_options_t* options) {
     pid_t cur_tid = tracee_pid;
     while(1) {
         /* Wait for a child to change state (stop or terminate) */
-        const pid_t status_tid = _wait_for_syscall_or_exit(cur_tid, &tracee_exit_status);
+        const pid_t status_tid = wait_for_syscall_or_exit(cur_tid, &tracee_exit_status);
 
         /* Check status */
         /*   -> Thread terminated (indicated via negative int) */
@@ -201,7 +201,7 @@ int do_tracer(tracer_options_t* options) {
 
                 /* OPTIONAL: Stop (i.e., single step) if requested */
                 if (syscall_nr == options->pause_on_syscall_nr) {
-                    _wait_for_user_input();
+                    wait_for_user_input();
                 }
 
             /* >> Syscall EXIT: Print syscall return value (+ optionally stacktrace) << */
@@ -234,12 +234,12 @@ int do_tracer(tracer_options_t* options) {
 }
 
 
-void _wait_for_user_input(void) {
+static void wait_for_user_input(void) {
     int c;
     while ('\n' != (c = getchar()) && EOF != c) { }     /* Wait until user presses enter to continue */
 }
 
-int _wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
+static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
     int sig = 0;
     siginfo_t si;
 

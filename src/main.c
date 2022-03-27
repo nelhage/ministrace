@@ -64,17 +64,17 @@ int main(int argc, char **argv) {
             child_args_offset++;
         }
 
-        const pid_t childs_pid = DIE_WHEN_ERRNO( fork() );
+        const pid_t child_pid = DIE_WHEN_ERRNO(fork() );
         if (!tracer_options.daemonize) {
         /* Roles:  Tracer = Parent,  Tracee = Child */
-            tracer_options.tracee_pid = childs_pid;
-            return (!childs_pid) ?
+            tracer_options.tracee_pid = child_pid;
+            return (!child_pid) ?
                    (do_tracee(argc - child_args_offset, argv + child_args_offset, &tracer_options)) :
                    (do_tracer(&tracer_options));
         } else {
         /* Roles:  Tracee = Parent,  Tracer = (Grand)child */
             tracer_options.tracee_pid = getppid();
-            return (!childs_pid) ?
+            return (!child_pid) ?
                    (do_tracer(&tracer_options)) :
                    (do_tracee(argc - child_args_offset, argv + child_args_offset, &tracer_options));
         }

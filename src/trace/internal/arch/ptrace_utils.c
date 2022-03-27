@@ -8,9 +8,9 @@
 #include "ptrace_utils.h"
 
 
-
+/* -- Functions -- */
 /* ----------------------- ----------------------- amd64 / i386 ----------------------- ----------------------- */
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(__i386__) || defined(__x86_64__)
 
 void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
   struct iovec iov = {
