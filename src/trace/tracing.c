@@ -273,8 +273,8 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *   - `__WALL`: Wait for all children, regardless of type (`clone` or non-`clone`)
          *               See also https://kernelnewbies.kernelnewbies.narkive.com/9Zd9eWeb/waitpid-2-and-clone-thread
          */
-        int tracee_status;
-        pid_t wait_tid = DIE_WHEN_ERRNO( waitpid(-1, &tracee_status, __WALL) );
+        int trapped_tracee_status;
+        pid_t trapped_tracee_tid = DIE_WHEN_ERRNO(waitpid(-1, &trapped_tracee_status, __WALL) );
 
 
         /* (2) Check tracee's process status */
@@ -294,9 +294,9 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *   - `int WIFSTOPPED (int status)`: Returns nonzero value if child is stopped
          *     - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
-        if (WIFSTOPPED(tracee_status)) {
-            tid = wait_tid;
-            const int stopsig = WSTOPSIG(tracee_status);
+        if (WIFSTOPPED(trapped_tracee_status)) {
+            tid = trapped_tracee_tid;
+            const int stopsig = WSTOPSIG(trapped_tracee_status);
 
             /* (I) Syscall-enter-/-exit-stop
              *     Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
@@ -304,7 +304,7 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
              *                (due to by tracer set `PTRACE_O_TRACESYSGOOD` option))
              */
             if ((SIGTRAP | PTRACE_TRAP_INDICATOR_BIT) == stopsig) {
-                return wait_tid;       /* Child was stopped (due to syscall breakpoint) -> get syscall info */
+                return trapped_tracee_tid;       /* >>>   Child has stopped (indicated by positive returned tid; only possible stop reason here: due to syscall breakpoint) */
 
             /* (II) `PTRACE_EVENT_xxx` stops
              *      Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
@@ -319,31 +319,29 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
              *                             caused the stop; copies a `siginfo_t` structure
              *                             from the tracee to the address data in the tracer
              */
-            } else if (ptrace(PTRACE_GETSIGINFO, wait_tid, 0, &si) < 0) {
+            } else if (ptrace(PTRACE_GETSIGINFO, trapped_tracee_tid, 0, &si) < 0) {
                 // ...
 
-            /*
-             * (IV) Signal-delivery stops
-             */
+            /* (IV) Signal-delivery stops */
             } else {
                 fprintf(stderr, "\n+++ [%d] received (not delivered yet) signal \"%s\" +++\n", tid, strsignal(stopsig));
                 sig = stopsig;
             }
 
 
-        /* (2.2) Possibility 2: Child terminated
-         *   - Possible reasons:
-         *     (I)   Child exited w/ `exit`     (check via `WIFEXITED(status)`)
-         *     (II)  Child exited due to signal (check via `WIFSIGNALED(status)`)
-         */
+        /* (2.2) Possibility 2: Child terminated */
         } else {
-            if (WIFEXITED(tracee_status)) {
-                *exit_status = WEXITSTATUS(tracee_status);
-            } else if (WIFSIGNALED(tracee_status)) {
-                *exit_status = WTERMSIG(tracee_status);
+            /* Retrieve 'exit status' of child */
+            /* (I)   Child exited w/ `exit`     (check via `WIFEXITED(status)`) */
+            if (WIFEXITED(trapped_tracee_status)) {
+                *exit_status = WEXITSTATUS(trapped_tracee_status);
+
+            /* (II)  Child exited due to signal (check via `WIFSIGNALED(status)`) */
+            } else if (WIFSIGNALED(trapped_tracee_status)) {
+                *exit_status = WTERMSIG(trapped_tracee_status);
             }
 
-            return -(wait_tid);
+            return -(trapped_tracee_tid);       /* >>>   Child has terminated (indicated by negative returned tid; possible stop reasons: see above) */
         }
     }
 }
