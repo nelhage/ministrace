@@ -23,7 +23,7 @@
 
 
 /* -- Function prototypes -- */
-static int wait_for_syscall_or_exit(pid_t tid, int *exit_status);
+static int wait_for_trap(pid_t tid, int *exit_status);
 static void wait_for_user_input(void);
 
 
@@ -149,7 +149,7 @@ int do_tracer(tracer_options_t* options) {
     pid_t cur_tid = tracee_pid;
     while (1) {
         /* Wait for a child to change state (stop or terminate) */
-        const pid_t status_tid = wait_for_syscall_or_exit(cur_tid, &tracee_exit_status);
+        const pid_t status_tid = wait_for_trap(cur_tid, &tracee_exit_status);
 
         /* Check status */
         /*   -> Thread terminated (indicated via negative int) */
@@ -178,7 +178,7 @@ int do_tracer(tracer_options_t* options) {
             }
 
             const char* scall_name = NULL;
-            if (!(scall_name = syscalls_get_name(syscall_nr))) {
+            if (! (scall_name = syscalls_get_name(syscall_nr)) ) {
                 LOG_WARN("Unknown syscall w/ nr=%ld", syscall_nr);
                 static char fallback_generic_syscall_name[128];
                 snprintf(fallback_generic_syscall_name, sizeof(fallback_generic_syscall_name), "sys_%ld", syscall_nr);
@@ -237,11 +237,10 @@ static void wait_for_user_input(void) {
     while ('\n' != (c = getchar()) && EOF != c) { }     /* Wait until user presses enter to continue */
 }
 
-static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
-    int sig = 0;
-    siginfo_t si;
+static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap events' which are due to termination or syscall's */
 
-    while (1) {
+    int pending_signal = 0;
+    for (;;) {
         /* (0) Restart stopped tracee but set next breakpoint (on next syscall)   (AND "forward" received signal to tracee)
          *   ELUCIDATION:
          *     - `PTRACE_SYSCALL`: Restarts stopped tracee (similar to `PTRACE_CONT`),
@@ -260,12 +259,12 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
          *                         passes the signal to the tracee in the next ptrace restart request.
          */
-        if (-1 != tid) {        /* Allow function to ONLY WAIT (e.g., when prior child terminated) */
-            DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, tid, 0, sig) );
+        if (-1 != tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior child terminated) */
+            DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, tid, 0, pending_signal) );
         }
 
-        /* Reset restart signal */
-        sig = 0;
+        /* Reset signal (after its delivery) */
+        pending_signal = 0;
 
 
         /* (1) Wait (i.e., block) for ANY tracee to change state (stops or terminates) */
@@ -274,7 +273,7 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *               See also https://kernelnewbies.kernelnewbies.narkive.com/9Zd9eWeb/waitpid-2-and-clone-thread
          */
         int trapped_tracee_status;
-        pid_t trapped_tracee_tid = DIE_WHEN_ERRNO(waitpid(-1, &trapped_tracee_status, __WALL) );
+        pid_t trapped_tracee_tid = DIE_WHEN_ERRNO( waitpid(-1, &trapped_tracee_status, __WALL) );
 
 
         /* (2) Check tracee's process status */
@@ -295,6 +294,8 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
          *     - `int WSTOPSIG (int status)`: Returns signal number of signal that caused child to stop if `WIFSTOPPED` (passed in as `status` arg) is true
          */
         if (WIFSTOPPED(trapped_tracee_status)) {
+            siginfo_t si;
+
             tid = trapped_tracee_tid;
             const int stopsig = WSTOPSIG(trapped_tracee_status);
 
@@ -325,7 +326,7 @@ static int wait_for_syscall_or_exit(pid_t tid, int *exit_status) {
             /* (IV) Signal-delivery stops */
             } else {
                 fprintf(stderr, "\n+++ [%d] received (not delivered yet) signal \"%s\" +++\n", tid, strsignal(stopsig));
-                sig = stopsig;
+                pending_signal = stopsig;
             }
 
 
