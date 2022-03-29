@@ -52,7 +52,7 @@ void unwind_fin(void) {
 }
 
 
-void unwind_print_backtrace_of_tid(pid_t tid) {
+void unwind_print_backtrace_of_proc(pid_t tid) {
     if (!_unw_as) {
         LOG_ERROR_AND_EXIT("Not init yet");
     }

@@ -90,8 +90,10 @@ int do_tracer(tracer_options_t* options) {
     }
 
     /* Disable IO buffering for accurate output */
-    setvbuf(stdout, NULL, _IONBF, 0);
-    setvbuf(stderr, NULL, _IONBF, 0);
+    if (0 != setvbuf(stdout, NULL, _IONBF, 0) ||
+        0 != setvbuf(stderr, NULL, _IONBF, 0)) {
+        LOG_ERROR_AND_EXIT("Couldn't set buffering options for std-io");
+    }
 
 
     const pid_t tracee_pid = options->tracee_pid;
@@ -108,9 +110,7 @@ int do_tracer(tracer_options_t* options) {
     }
     /* ELSE: tracee (= child) did `PTRACE_TRACEME`, hence, nothing to do in tracer (= parent)  */
 
-/* 0a. Setup: Wait until child stops
- *     Either already stopped by previous `PTRACE_ATTACH` or by itself
- */
+/* 0a. Setup: Wait until child stops  --> Either already stopped by previous `PTRACE_ATTACH` or by itself */
     /* ELUCIDATION:
      *  - `WIFSTOPPED`: Returns nonzero value if child process is stopped
      */
@@ -133,9 +133,8 @@ int do_tracer(tracer_options_t* options) {
     DIE_WHEN_ERRNO( ptrace(PTRACE_SETOPTIONS,
                            tracee_pid,
                            0,
-                           PTRACE_O_TRACESYSGOOD | ((options->follow_fork) ?
-                                (PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK) :
-                                (0))) );
+                           PTRACE_O_TRACESYSGOOD
+                                | ( (options->follow_fork) ? (PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK) : (0)) ) );
 
 #ifdef WITH_STACK_UNWINDING
     if (options->print_stacktrace) {
@@ -146,28 +145,27 @@ int do_tracer(tracer_options_t* options) {
 
 /* 1. Trace */
     int tracee_exit_status = -1;
-    pid_t cur_tid = tracee_pid;
-    while (1) {
-        /* Wait for a tracee to change state (stop or terminate --> HERE ONLY TERMINATION OR SYSCALL TRAPS) */
-        const pid_t trapped_tracee_tid = wait_for_trap(cur_tid, &tracee_exit_status);
+    for (pid_t trapped_tracee_sttid = tracee_pid; ; ) {     /* `sttid`, aka., "status tid" = tid which contains status information in sign bit (has stopped = positive, has terminated = negative) */
 
-        /* Check status */
-        /*   -> Thread terminated (indicated via negative tid) */
-        if (0 > trapped_tracee_tid) {
-            fprintf(stderr, "\n+++ [%d] terminated w/ %d +++\n", -(trapped_tracee_tid), tracee_exit_status);
+    /* 1.1. Wait for a tracee to change state (stop or terminate --> HERE ONLY TERMINATION OR SYSCALL TRAPS) */
+        trapped_tracee_sttid = wait_for_trap(trapped_tracee_sttid, &tracee_exit_status);
 
-            if (-(tracee_pid) == trapped_tracee_tid) { break; }
-            else {
-                cur_tid = -1;
+
+    /* 1.2. Check status */
+        /*   -> Thread terminated */
+        if (0 > trapped_tracee_sttid) {
+            fprintf(stderr, "\n+++ [%d] terminated w/ %d +++\n", -(trapped_tracee_sttid), tracee_exit_status);
+
+            if (-(tracee_pid) == trapped_tracee_sttid) { break; }    /* -> Thread group leader exited -> Stop tracing */
+            else {                                                   /* -> LWP in thread group exited */
+                trapped_tracee_sttid = -1;       /* NOTE: `-1` = tracee has exited (pertinent for `wait_for_trap`) */
                 continue;
             }
 
-        /*   -> Thread stopped (i.e., hit breakpoint; indicated via positive tid) */
+        /*   -> Thread stopped (i.e., hit breakpoint) */
         } else {
-            cur_tid = trapped_tracee_tid;
-
             struct user_regs_struct_full regs;
-            ptrace_get_regs_content(cur_tid, &regs);
+            ptrace_get_regs_content(trapped_tracee_sttid, &regs);
 
             const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
             if (NO_SYSCALL == syscall_nr ||                                /* "Trap" was, e.g., a signal */
@@ -184,15 +182,15 @@ int do_tracer(tracer_options_t* options) {
                 scall_name = fallback_generic_syscall_name;
             }
 
-            /* >> Syscall ENTER: Print syscall-nr + -args << */
+            /* >> SYSCALL-ENTER: Print syscall-nr + -args << */
             if (!USER_REGS_STRUCT_SC_HAS_RTNED(regs)) {
                 // LOG_DEBUG("%d:: SYSCALL_ENTER ...", status_tid);
 
                 if (options->follow_fork) {
-                    fprintf(stderr, "\n[%d] ", cur_tid);
+                    fprintf(stderr, "\n[%d] ", trapped_tracee_sttid);
                 }
                 fprintf(stderr, "%s(", scall_name);
-                syscalls_print_args(cur_tid, &regs);
+                syscalls_print_args(trapped_tracee_sttid, &regs);
                 fprintf(stderr, ")");
 
                 /* OPTIONAL: Stop (i.e., single step) if requested */
@@ -200,32 +198,37 @@ int do_tracer(tracer_options_t* options) {
                     wait_for_user_input();
                 }
 
-            /* >> Syscall EXIT: Print syscall return value (+ optionally stacktrace) << */
+            /* >> SYSCALL-EXIT: Print syscall return value (+ optionally stacktrace) << */
             } else {
                 // LOG_DEBUG("%d:: SYSCALL_EXIT ...", status_tid);
 
                 if (options->follow_fork) {      /* For task identification (in log) when following `clone`s */
                     fprintf(stderr, "\n... [%d - %s (%d)]",
-                            cur_tid, scall_name, cur_tid);
+                            trapped_tracee_sttid, scall_name, trapped_tracee_sttid);
                 }
                 const long syscall_rtn_val = USER_REGS_STRUCT_SC_RTNVAL(regs);
                 fprintf(stderr, " = %ld\n", syscall_rtn_val);
 
 #ifdef WITH_STACK_UNWINDING
                 if (options->print_stacktrace) {
-                    unwind_print_backtrace_of_tid(cur_tid);
+                    unwind_print_backtrace_of_proc(trapped_tracee_sttid);
                 }
 #endif /* WITH_STACK_UNWINDING */
             }
         }
+
     }
 
+
+/* 2. Cleanup */
 #ifdef WITH_STACK_UNWINDING
     if (options->print_stacktrace) {
         unwind_fin();
     }
 #endif /* WITH_STACK_UNWINDING */
 
+
+/* 3. Exit  (returning exit status of thread group leader) */
     fprintf(stderr, "+++ exited w/ %d +++\n", tracee_exit_status);
     return tracee_exit_status;
 }
@@ -236,12 +239,11 @@ static void wait_for_user_input(void) {
     while ('\n' != (c = getchar()) && EOF != c) { }     /* Wait until user presses enter to continue */
 }
 
-static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap events' which are due to termination or syscall's */
+static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap events' which are due to termination or stops caused by syscall's */
 
-    int pending_signal = 0;
-    for (;;) {
-        /* (0) Restart stopped tracee but set next breakpoint (on next syscall)   (AND "forward" received signal to tracee)
-         *   ELUCIDATION:
+    for (int pending_signal = 0; ; ) {
+    /* (0) Restart stopped tracee but set next breakpoint (on next syscall)   (AND "forward" received signal to tracee) */
+        /*   ELUCIDATION:
          *     - `PTRACE_SYSCALL`: Restarts stopped tracee (similar to `PTRACE_CONT`),
          *                         but sets breakpoint at next syscall entry/exit
          *                         (Tracee will, as usual, be stopped upon receipt of a signal)
@@ -258,24 +260,24 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
          *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
          *                         passes the signal to the tracee in the next ptrace restart request.
          */
-        if (-1 != tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior tracee terminated) */
+        if (-1 != tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior trapped tracee terminated) */
             DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, tid, 0, pending_signal) );
         }
 
-        /* Reset signal (after its delivery) */
+        /* Reset signal (after it has been delivered) */
         pending_signal = 0;
 
 
-        /* (1) Wait (i.e., block) for ANY tracee to change state (stops or terminates) */
+    /* (1) Wait (i.e., block) for ANY tracee to change state (stops or terminates) */
         /* ELUCIDATION:
          *   - `__WALL`: Wait for all children, regardless of type (`clone` or non-`clone`)
          *               See also https://kernelnewbies.kernelnewbies.narkive.com/9Zd9eWeb/waitpid-2-and-clone-thread
          */
         int trapped_tracee_status;
-        pid_t trapped_tracee_tid = DIE_WHEN_ERRNO( waitpid(-1, &trapped_tracee_status, __WALL) );
+        const pid_t trapped_tracee_tid = DIE_WHEN_ERRNO( waitpid(-1, &trapped_tracee_status, __WALL) );
 
 
-        /* (2) Check tracee's process status */
+    /* (2) Check tracee's process status */
         /* (2.1) Possibility 1: Tracee was stopped
          *   - Possible reasons:
          *     (I)   Syscall-enter-/-exit-stop      => `stopsig == (SIGTRAP | PTRACE_TRAP_INDICATOR_BIT)`
@@ -304,7 +306,7 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
              *                (due to by tracer set `PTRACE_O_TRACESYSGOOD` option))
              */
             if ((SIGTRAP | PTRACE_TRAP_INDICATOR_BIT) == stopsig) {
-                return trapped_tracee_tid;       /* >>>   Tracee has stopped (indicated by positive returned tid; only possible stop reason here: due to syscall breakpoint) */
+                return trapped_tracee_tid;       /* >>>   Tracee was stopped (indicated by positive returned tid; only possible stop reason here: due to syscall breakpoint) */
 
             /* (II) `PTRACE_EVENT_xxx` stops
              *      Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
@@ -341,7 +343,7 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
                 *exit_status = WTERMSIG(trapped_tracee_status);
             }
 
-            return -(trapped_tracee_tid);       /* >>>   Tracee has terminated (indicated by negative returned tid; possible stop reasons: see above) */
+            return -(trapped_tracee_tid);        /* >>>   Tracee has terminated (indicated by negative returned tid; possible stop reasons: see above) */
         }
     }
 }
