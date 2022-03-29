@@ -89,12 +89,12 @@ int do_tracer(tracer_options_t* options) {
 		kill(getppid(), SIGKILL);
     }
 
-    const pid_t tracee_pid = options->tracee_pid;
-
     /* Disable IO buffering for accurate output */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
+
+    const pid_t tracee_pid = options->tracee_pid;
 
     if (options->attach_to_tracee || options->daemonize) {
         /* ELUCIDATION:
@@ -148,24 +148,23 @@ int do_tracer(tracer_options_t* options) {
     int tracee_exit_status = -1;
     pid_t cur_tid = tracee_pid;
     while (1) {
-        /* Wait for a child to change state (stop or terminate) */
-        const pid_t status_tid = wait_for_trap(cur_tid, &tracee_exit_status);
+        /* Wait for a tracee to change state (stop or terminate --> HERE ONLY TERMINATION OR SYSCALL TRAPS) */
+        const pid_t trapped_tracee_tid = wait_for_trap(cur_tid, &tracee_exit_status);
 
         /* Check status */
-        /*   -> Thread terminated (indicated via negative int) */
-        if (0 > status_tid) {
-            fprintf(stderr, "\n+++ [%d] terminated w/ %d +++\n", -(status_tid), tracee_exit_status);
+        /*   -> Thread terminated (indicated via negative tid) */
+        if (0 > trapped_tracee_tid) {
+            fprintf(stderr, "\n+++ [%d] terminated w/ %d +++\n", -(trapped_tracee_tid), tracee_exit_status);
 
-            if (-(tracee_pid) == status_tid) {
-                break;
-            } else {
+            if (-(tracee_pid) == trapped_tracee_tid) { break; }
+            else {
                 cur_tid = -1;
                 continue;
             }
 
-        /*   -> Thread stopped (i.e., hit breakpoint; indicated via positive int) */
+        /*   -> Thread stopped (i.e., hit breakpoint; indicated via positive tid) */
         } else {
-            cur_tid = status_tid;
+            cur_tid = trapped_tracee_tid;
 
             struct user_regs_struct_full regs;
             ptrace_get_regs_content(cur_tid, &regs);
@@ -259,7 +258,7 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
          *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
          *                         passes the signal to the tracee in the next ptrace restart request.
          */
-        if (-1 != tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior child terminated) */
+        if (-1 != tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior tracee terminated) */
             DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, tid, 0, pending_signal) );
         }
 
@@ -305,7 +304,7 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
              *                (due to by tracer set `PTRACE_O_TRACESYSGOOD` option))
              */
             if ((SIGTRAP | PTRACE_TRAP_INDICATOR_BIT) == stopsig) {
-                return trapped_tracee_tid;       /* >>>   Child has stopped (indicated by positive returned tid; only possible stop reason here: due to syscall breakpoint) */
+                return trapped_tracee_tid;       /* >>>   Tracee has stopped (indicated by positive returned tid; only possible stop reason here: due to syscall breakpoint) */
 
             /* (II) `PTRACE_EVENT_xxx` stops
              *      Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
@@ -330,19 +329,19 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
             }
 
 
-        /* (2.2) Possibility 2: Child terminated */
+        /* (2.2) Possibility 2: Tracee terminated */
         } else {
-            /* Retrieve 'exit status' of child */
-            /* (I)   Child exited w/ `exit`     (check via `WIFEXITED(status)`) */
+            /* Retrieve 'exit status' of tracee */
+            /* (I)   Tracee exited w/ `exit`     (check via `WIFEXITED(status)`) */
             if (WIFEXITED(trapped_tracee_status)) {
                 *exit_status = WEXITSTATUS(trapped_tracee_status);
 
-            /* (II)  Child exited due to signal (check via `WIFSIGNALED(status)`) */
+            /* (II)  Tracee exited due to signal (check via `WIFSIGNALED(status)`) */
             } else if (WIFSIGNALED(trapped_tracee_status)) {
                 *exit_status = WTERMSIG(trapped_tracee_status);
             }
 
-            return -(trapped_tracee_tid);       /* >>>   Child has terminated (indicated by negative returned tid; possible stop reasons: see above) */
+            return -(trapped_tracee_tid);       /* >>>   Tracee has terminated (indicated by negative returned tid; possible stop reasons: see above) */
         }
     }
 }
