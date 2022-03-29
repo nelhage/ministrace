@@ -18,12 +18,12 @@
 #include "../common/error.h"
 
 
-/* -- Global consts -- */
+/* -- Consts -- */
 #define PTRACE_TRAP_INDICATOR_BIT (1 << 7)
 
 
 /* -- Function prototypes -- */
-static int wait_for_trap(pid_t tid, int *exit_status);
+static int set_bp_and_wait_for_trap(pid_t next_bp_tid, int *exit_status);
 static void wait_for_user_input(void);
 
 
@@ -148,7 +148,7 @@ int do_tracer(tracer_options_t* options) {
     for (pid_t trapped_tracee_sttid = tracee_pid; ; ) {     /* `sttid`, aka., "status tid" = tid which contains status information in sign bit (has stopped = positive, has terminated = negative) */
 
     /* 1.1. Wait for a tracee to change state (stop or terminate --> HERE ONLY TERMINATION OR SYSCALL TRAPS) */
-        trapped_tracee_sttid = wait_for_trap(trapped_tracee_sttid, &tracee_exit_status);
+        trapped_tracee_sttid = set_bp_and_wait_for_trap(trapped_tracee_sttid, &tracee_exit_status);
 
 
     /* 1.2. Check status */
@@ -239,7 +239,7 @@ static void wait_for_user_input(void) {
     while ('\n' != (c = getchar()) && EOF != c) { }     /* Wait until user presses enter to continue */
 }
 
-static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap events' which are due to termination or stops caused by syscall's */
+static int set_bp_and_wait_for_trap(pid_t next_bp_tid, int *exit_status) {  /* NOTEs: 'bp' = breakpoint; Reports only 'trap events' which are due to termination or stops caused by syscall's */
 
     for (int pending_signal = 0; ; ) {
     /* (0) Restart stopped tracee but set next breakpoint (on next syscall)   (AND "forward" received signal to tracee) */
@@ -260,8 +260,8 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
          *                         suppressed by the tracer. If the tracer doesn't suppress the signal, it
          *                         passes the signal to the tracee in the next ptrace restart request.
          */
-        if (-1 != tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior trapped tracee terminated) */
-            DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, tid, 0, pending_signal) );
+        if (-1 != next_bp_tid) {        /* Wait only (i.e., don't set breakpoint; e.g., when prior trapped tracee terminated) */
+            DIE_WHEN_ERRNO( ptrace(PTRACE_SYSCALL, next_bp_tid, 0, pending_signal) );
         }
 
         /* Reset signal (after it has been delivered) */
@@ -297,10 +297,10 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
         if (WIFSTOPPED(trapped_tracee_status)) {
             siginfo_t si;
 
-            tid = trapped_tracee_tid;
+            next_bp_tid = trapped_tracee_tid;
             const int stopsig = WSTOPSIG(trapped_tracee_status);
 
-            /* (I) Syscall-enter-/-exit-stop
+            /* (I) SYSCALL-ENTER-/-EXIT-stop
              *     Condition: `waitpid`(2) returns w/ `WIFSTOPPED(status)` true, and
              *                `WSTOPSIG(status)` gives the value `(SIGTRAP | 0x80)`)
              *                (due to by tracer set `PTRACE_O_TRACESYSGOOD` option))
@@ -326,7 +326,7 @@ static int wait_for_trap(pid_t tid, int *exit_status) {  /* Reports only 'trap e
 
             /* (IV) Signal-delivery stops */
             } else {
-                fprintf(stderr, "\n+++ [%d] received (not delivered yet) signal \"%s\" +++\n", tid, strsignal(stopsig));
+                fprintf(stderr, "\n+++ [%d] received (not delivered yet) signal \"%s\" +++\n", trapped_tracee_tid, strsignal(stopsig));
                 pending_signal = stopsig;
             }
 
