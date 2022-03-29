@@ -1,5 +1,5 @@
 /**
- * Used for unwinding stack
+ * Used for execution stack unwinding
  */
 #ifndef UNWIND_H
 #define UNWIND_H
