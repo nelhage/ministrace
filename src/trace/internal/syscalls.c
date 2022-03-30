@@ -98,6 +98,7 @@ static void fprint_str_esc(FILE *stream, char *str) {
     for (int i = 0; '\0' != str[i]; i++) {
         const char c = str[i];
         if (isprint(c) && c != '\\') {
+            if ('"' == c) { fputc('\\', stream); }  /* Escape '"' */
             fputc(c, stream);
         } else {
             fprintf(stream, "\\x%02x", (unsigned char)c);

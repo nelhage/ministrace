@@ -47,9 +47,8 @@ int do_tracee(int argc, char** argv,
          *    -> Tracer will resume execution w/ `PTRACE_SYSCALL`
          */
         DIE_WHEN_ERRNO( kill(getpid(), SIGSTOP) );
-    }
 
-    else {
+    } else {
     /* Allow non-root child (= tracer) to trace parent (= tracee)   (ONLY PERTINENT when Yama ptrace_scope = 1 AND `PTRACE_ATTACH` is used) */
         DIE_WHEN_ERRNO( prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY) );
 
@@ -61,7 +60,7 @@ int do_tracee(int argc, char** argv,
 
 /* Execute actual program */
     return execvp(tracee_exec_argv[0], tracee_exec_argv);
-    LOG_ERROR_AND_EXIT("Exec'ing \"%s\" failed (errno=%d)", tracee_exec_argv[0], errno);
+    LOG_ERROR_AND_EXIT("Exec'ing \"%s\" failed -- %s", tracee_exec_argv[0], strerror(errno));
 }
 
 

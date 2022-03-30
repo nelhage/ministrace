@@ -21,7 +21,7 @@ void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
   errno = 0;
   ptrace(PTRACE_GETREGSET, tid, NT_PRSTATUS, &iov);
   if (errno) {
-    LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);
+      LOG_ERROR_AND_EXIT("Reading registers failed -- %s", strerror(errno));
   }
 }
 
@@ -39,7 +39,7 @@ void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 //   errno = 0;
 //   ptrace(PTRACE_GETREGSET, tid, NT_PRSTATUS, &iov);
 //   if (errno) {
-//     LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);
+//     LOG_ERROR_AND_EXIT("Reading registers failed -- %s", strerror(errno));
 //   }
 //
 //   /* 2. Get syscall-nr */
@@ -47,7 +47,7 @@ void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs) {
 //   iov.iov_len = sizeof(regs->syscallno);
 //   ptrace(PTRACE_GETREGSET, tid, NT_ARM_SYSTEM_CALL, &iov);        // !!! TODO: Returns wrong syscall nr ?? !!!
 //   if (errno) {
-//     LOG_ERROR_AND_EXIT("Reading registers failed (errno=%d)", errno);
+//     LOG_ERROR_AND_EXIT("Reading registers failed -- %s", strerror(errno));
 //   }
 // }
 
