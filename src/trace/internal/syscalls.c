@@ -12,8 +12,8 @@
 
 
 /* -- Function prototypes -- */
-static void fprint_str_esc(FILE* restrict stream, char *str);
 static long from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs, int which);
+static void fprint_str_esc(FILE *stream, char *str, size_t str_len);
 
 
 /* -- Functions -- */
@@ -54,17 +54,23 @@ void syscalls_print_args(__attribute__((unused)) pid_t tid, struct user_regs_str
     for (int arg_nr = 0; arg_nr < nargs; arg_nr++) {
         long arg = from_regs_struct_get_syscall_arg(regs, arg_nr);
         long type = ent ? ent->args[arg_nr] : ARG_PTR;      /* Default to `ARG_PTR` */
+
         switch (type) {
             case ARG_INT:
                 fprintf(stderr, "%ld", arg);
                 break;
             case ARG_STR: {
-                char* strval = ptrace_read_string(tid, arg);
+                const long bytes_to_read = (__SNR_write == syscall_nr || __SNR_read == syscall_nr) ?        // TODO: REVISE
+                                                 (from_regs_struct_get_syscall_arg(regs, 2)) :
+                                                 (-1);
+
+                char* ptrace_read_str;
+                size_t ptrace_read_str_len = ptrace_read_string(tid, arg, bytes_to_read, &ptrace_read_str);
 
                 // fprintf(stderr, "\"%s\"", strval);
-                fprintf(stderr, "\""); fprint_str_esc(stderr, strval); fprintf(stderr, "\"");
+                fprintf(stderr, "\""); fprint_str_esc(stderr, ptrace_read_str, ptrace_read_str_len); fprintf(stderr, "\"");
 
-                free(strval);
+                free(ptrace_read_str);
                 break;
             }
             default:    /* e.g., ARG_PTR */
@@ -91,11 +97,13 @@ static long from_regs_struct_get_syscall_arg(struct user_regs_struct_full *regs,
 
 /*
  * Prints ASCII control chars in `str` using a hex representation
+ * Doesn't rely on NUL-terminator (since arbitrary binary data
+ * might incl. also `\0`)
  */
-static void fprint_str_esc(FILE *stream, char *str) {
+static void fprint_str_esc(FILE *stream, char *str, size_t str_len) {
     setlocale(LC_ALL, "C");
 
-    for (int i = 0; '\0' != str[i]; i++) {
+    for (unsigned int i = 0; i < str_len; i++) {
         const char c = str[i];
         if (isprint(c) && c != '\\') {
             if ('"' == c) { fputc('\\', stream); }  /* Escape '"' */

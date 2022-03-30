@@ -10,6 +10,8 @@
 
 /* -- Function prototypes -- */
 void ptrace_get_regs_content(pid_t tid, struct user_regs_struct_full *regs);
-char *ptrace_read_string(pid_t tid, unsigned long addr);        /* WARNING: MUST BE `free`(3)'ed */
+size_t ptrace_read_string(pid_t tid, unsigned long addr,
+                          ssize_t bytes_to_read,
+                          char** read_str_ptr_ptr);        /* WARNING: MUST BE `free`(3)'ed */
 
 #endif /* PTRACE_UTILS_H */
