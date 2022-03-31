@@ -70,11 +70,11 @@ size_t ptrace_read_string(pid_t tid, unsigned long addr,
         read_bytes += sizeof(ptrace_read_word);
 
     /* 1.5. Read end of string ? */
-    // WE KNOW HOW # OF BYTES (e.g., due to `read`(2) or `write`(2) syscall -- which may take in arbitrary binary data (i.e., doesn't have to be NUL terminated) + a size)
+    // WE KNOW # OF BYTES (e.g., due to `read`(2) or `write`(2) syscall -- which may take in arbitrary binary data (i.e., doesn't have to be NUL terminated) + a size)
         if (bytes_to_read >= 0) {
             if (read_bytes >= (size_t)bytes_to_read) {
                 read_str_ptr[bytes_to_read] = '\0'; /* Must be after ALL bytes (hence no -1) */
-                return bytes_to_read - 1;    /* Length excl. NUL byte */
+                return (0 == bytes_to_read) ? (0) : (bytes_to_read - 1);    /* Length excl. NUL byte */
             }
         }
 
