@@ -164,7 +164,11 @@ int do_tracer(tracer_options_t* options) {
         /*   -> Thread stopped (i.e., hit breakpoint) */
         } else {
             struct user_regs_struct_full regs;
-            ptrace_get_regs_content(trapped_tracee_sttid, &regs);
+            if (-1 == ptrace_get_regs_content(trapped_tracee_sttid, &regs)) {
+                LOG_DEBUG("Couldn't read register contents -- process got probably `SIGKILL`ed");
+                trapped_tracee_sttid = -1;
+                continue;
+            }
 
             const long syscall_nr = USER_REGS_STRUCT_SC_NO(regs);
             if (NO_SYSCALL == syscall_nr ||                                /* "Trap" was, e.g., a signal */
