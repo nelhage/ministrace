@@ -1,10 +1,10 @@
 # ministrace v2
 
 ## 1. About
-ministrace v2 (or rather *medstrace*) is a ~~small~~ medium-sized strace implementation (v1 was originally written by Nelson Elhage
+*ministrace* v2 (or rather *medstrace*) is a ~~small~~ medium-sized `strace`(1) implementation (v1 was originally written by Nelson Elhage
 (@nelhage)).
 
-ministrace is a minimal implementation of strace originally about ~~70~~ 700+
+*ministrace* is a minimal implementation of `strace`(1) originally about ~~70~~ 700+
 lines of C. It isn't nearly as functional as the real thing, but you
 can use it to learn most of what you need to know about the core
 interfaces it uses.
@@ -28,15 +28,14 @@ detail how it works.
 
 ## 2. Build
 ### 2.1. Prerequisites
-* Downloaded Linux kernel sources (required for parsing syscalls)
+* Downloaded ***Linux kernel sources*** (required for parsing syscalls)
   * Steps for Ubuntu:
     * Add apt-sources: Software & Updates &rarr; Ubuntu Software &rarr; Tick checkbox "Source Code" (or uncomment corresponding `#deb-src` in `/etc/apt/sources.list`)
     * Install sources (e.g., in `/usr/src`): `sudo apt source linux`
-* Installed cmake + ccmake (Note: ccmake is optional):
-  * On Ubuntu: `sudo snap install cmake --classic` + `sudo apt install -y cmake-curses-gui`
-
-### 2.2. Requirements based on chosen cmake options
-* Option `WITH_STACK_UNWINDING`: Installed *libunwind*, *libiberty* and *libdwfl* (`sudo apt install -y libunwind-dev libiberty-dev libdw-dev`)
+* Installed ***cmake*** & ccmake (Note: ccmake is optional):
+    * Debian/Ubuntu: `sudo apt install -y cmake cmake-curses-gui`
+* Requirements based on chosen cmake options:
+  * Option `WITH_STACK_UNWINDING`: Requires *libunwind*, *libiberty* and *libdwfl* (for Debian based systems: `sudo apt install -y libunwind-dev libiberty-dev libdw-dev`)
 
 
 ### 2.3. Out-of-source build
@@ -54,18 +53,6 @@ Basic ministrace usage just takes a command line:
 ```ministrace <program> [<args> ...]```
 
 This will run the program provided with the given arguments, and print
-out a sequence of all the system calls which made by the program.
-
-You can also specify a specific system call, using `--pause-sname sys_call_name`
-or `--pause-snr sys_call_number`, on which execution shall be paused:
-
-```
-ministrace --pause-sname <syscall name> <program> <program args>
-ministrace --pause-snr <syscall nr> <program> <program args>
-```
-
-This will print out a sequence of system calls which are made, and
-block (waiting for an enter on ministrace's terminal) whenever the
-program is about to execute the specified system call.
+out a sequence of all the system calls made by the program.
 
 To see all available options, use `--help`.
