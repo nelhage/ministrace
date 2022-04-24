@@ -37,3 +37,12 @@ ministrace -s <system call int> <program> <program args>
 This will print out a sequence of system calls which are made, and
 block (waiting for an enter on ministrace's terminal) whenever the
 program is about to execute the specified system call.
+
+## Additional features
+
+`ministrace` is deliberately minimal, demonstrating only the bare
+minimum of features necessary to understand approximately how a
+program like `strace` works. If you're interested in seeing a
+worked-out version with a few more of the details, @therealthingy has
+[created a fork](https://github.com/therealthingy/ministrace) based on
+this code base with many additional features.
